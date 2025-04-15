@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -8,15 +8,32 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login: React.FC = () => {
+  // Login form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  
+  // Signup form state
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupName, setSignupName] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
+  
+  // Auth state
+  const { login, signup, user } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -26,6 +43,23 @@ const Login: React.FC = () => {
     } catch (error) {
       console.error('Login error:', error);
       setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupLoading(true);
+
+    try {
+      await signup(signupEmail, signupPassword, signupName);
+      // Reset form
+      setSignupEmail('');
+      setSignupPassword('');
+      setSignupName('');
+    } catch (error) {
+      console.error('Signup error:', error);
+    } finally {
+      setSignupLoading(false);
     }
   };
 
@@ -43,66 +77,113 @@ const Login: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign in to your account</CardTitle>
+            <CardTitle>Welcome to WealthWise</CardTitle>
             <CardDescription>
-              Use one of the demo accounts below:
-              <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                <div className="p-2 border rounded">
-                  <div className="font-semibold">Admin</div>
-                  <div>admin@example.com</div>
-                  <div>admin123</div>
-                </div>
-                <div className="p-2 border rounded">
-                  <div className="font-semibold">Manager</div>
-                  <div>manager@example.com</div>
-                  <div>manager123</div>
-                </div>
-              </div>
+              Manage your finances with ease
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a 
-                    href="#" 
-                    className="text-xs text-primary hover:underline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toast.info('For demo purposes, passwords are shown in the demo account section above.');
-                    }}
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
-              </Button>
-            </CardFooter>
-          </form>
+          
+          <Tabs defaultValue="login">
+            <TabsList className="grid w-full grid-cols-2 mb-4 px-6">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login">
+              <form onSubmit={handleLogin}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <a 
+                        href="#" 
+                        className="text-xs text-primary hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toast.info('Password reset functionality will be implemented soon.');
+                        }}
+                      >
+                        Forgot password?
+                      </a>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Signing in...' : 'Sign in'}
+                  </Button>
+                </CardFooter>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="signup">
+              <form onSubmit={handleSignup}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Password must be at least 6 characters
+                    </p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={signupLoading}>
+                    {signupLoading ? 'Creating account...' : 'Create account'}
+                  </Button>
+                </CardFooter>
+              </form>
+            </TabsContent>
+          </Tabs>
         </Card>
       </div>
     </div>
