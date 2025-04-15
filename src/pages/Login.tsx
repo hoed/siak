@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,6 +61,12 @@ const Login: React.FC = () => {
     } finally {
       setSignupLoading(false);
     }
+  };
+
+  // For quick testing
+  const fillAdminCredentials = () => {
+    setEmail('admin@example.com');
+    setPassword('admin123');
   };
 
   return (
@@ -125,6 +131,15 @@ const Login: React.FC = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                     />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline" 
+                      onClick={fillAdminCredentials}
+                    >
+                      Fill admin credentials for testing
+                    </button>
                   </div>
                 </CardContent>
                 <CardFooter>
