@@ -27,7 +27,7 @@ const Login: React.FC = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    console.log('Auth state:', { user, authLoading }); // Debugging
+    console.log('Login page auth state:', { user, authLoading }); // Debugging
     if (!authLoading && user) {
       navigate('/dashboard');
     }
@@ -41,7 +41,7 @@ const Login: React.FC = () => {
       await login(email, password);
       toast.success('Successfully logged in!');
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login error caught in UI:', error);
       const message = error.message.includes('Email not confirmed')
         ? 'Please verify your email before logging in.'
         : error.message || 'Failed to log in. Please check your credentials.';
@@ -62,7 +62,7 @@ const Login: React.FC = () => {
       setSignupPassword('');
       setSignupName('');
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error('Signup error caught in UI:', error);
       toast.error(error.message || 'Failed to create account. Please try again.');
     } finally {
       setSignupLoading(false);

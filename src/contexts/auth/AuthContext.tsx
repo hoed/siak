@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client'; // Correct import path
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-// Define your custom User type
+// Define custom User type
 interface User {
   id: string;
   email: string;
@@ -46,8 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', { session, error }); // Debugging
         if (error) {
-          console.error('Error fetching session:', error.message);
+          console.error('Session error:', error.message);
           setLoading(false);
           return;
         }
@@ -102,13 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
       });
+      console.log('Login attempt:', { data, error }); // Debugging
       if (error) {
         throw new Error(error.message);
       }
       if (!data.user) {
         throw new Error('No user data returned after login');
       }
-      // User and session are updated via onAuthStateChange
     } catch (err: any) {
       console.error('Login error:', err);
       throw new Error(err.message || 'Failed to log in');
@@ -123,17 +124,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name,
-            role: 'manager', // Default role
+            role: 'manager',
           },
         },
       });
+      console.log('Signup attempt:', { data, error }); // Debugging
       if (error) {
         throw new Error(error.message);
       }
       if (!data.user) {
         throw new Error('No user data returned after signup');
       }
-      // Note: User may need to verify email before logging in
     } catch (err: any) {
       console.error('Signup error:', err);
       throw new Error(err.message || 'Failed to create account');
@@ -143,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
+      console.log('Logout attempt:', { error }); // Debugging
       if (error) {
         throw new Error(error.message);
       }
@@ -164,6 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           profileImage: userData.profileImage ?? user.profileImage,
         },
       });
+      console.log('Update user attempt:', { error }); // Debugging
       if (error) {
         throw new Error(error.message);
       }
