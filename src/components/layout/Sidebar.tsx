@@ -1,20 +1,28 @@
+
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
+  PieChart, 
+  ArrowLeftRight, 
+  Wallet, 
+  ArrowDownCircle, 
+  ArrowUpCircle, 
+  Users, 
+  FileText, 
   Settings,
+  CreditCard,
+  CalendarClock,
   LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth/AuthContext.tsx';
+import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Wallet } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
-
+  
   const isActive = (path: string) => {
     return location.pathname === path;
   };
@@ -25,6 +33,60 @@ const Sidebar: React.FC = () => {
       name: 'Dashboard', 
       path: '/dashboard',
       roles: ['admin', 'manager']
+    },
+    { 
+      icon: <ArrowUpCircle size={20} />, 
+      name: 'Income', 
+      path: '/income',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <ArrowDownCircle size={20} />, 
+      name: 'Expenses', 
+      path: '/expenses',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <ArrowLeftRight size={20} />, 
+      name: 'Transactions', 
+      path: '/transactions',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <CalendarClock size={20} />, 
+      name: 'Debts', 
+      path: '/debts',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <CalendarClock size={20} />, 
+      name: 'Receivables', 
+      path: '/receivables',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <CreditCard size={20} />, 
+      name: 'Accounts', 
+      path: '/accounts',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <FileText size={20} />, 
+      name: 'Reports', 
+      path: '/reports',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <PieChart size={20} />, 
+      name: 'Categories', 
+      path: '/categories',
+      roles: ['admin', 'manager']
+    },
+    { 
+      icon: <Users size={20} />, 
+      name: 'Users', 
+      path: '/users',
+      roles: ['admin']
     },
     { 
       icon: <Settings size={20} />, 
@@ -53,7 +115,7 @@ const Sidebar: React.FC = () => {
           <Avatar className="h-10 w-10">
             <AvatarImage src={user?.profileImage || ""} alt={user?.name || ""} />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {user?.name?.substring(0, 2).toUpperCase()}
+              {user?.name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="ml-3">

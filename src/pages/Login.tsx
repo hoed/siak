@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth/AuthContext.tsx';
+import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,24 +15,23 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
+  
   // Signup form state
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupLoading, setSignupLoading] = useState(false);
-
+  
   // Auth state
-  const { login, signup, user, loading: authLoading } = useAuth();
+  const { login, signup, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
-    console.log('Login page auth state:', { user, authLoading }); // Debugging
-    if (!authLoading && user) {
+    if (user) {
       navigate('/dashboard');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +39,9 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      toast.success('Successfully logged in!');
-    } catch (error: any) {
-      console.error('Login error caught in UI:', error);
-      const message = error.message.includes('Email not confirmed')
-        ? 'Please verify your email before logging in.'
-        : error.message || 'Failed to log in. Please check your credentials.';
-      toast.error(message);
-    } finally {
+      // Navigation handled in AuthContext
+    } catch (error) {
+      console.error('Login error:', error);
       setLoading(false);
     }
   };
@@ -57,13 +52,12 @@ const Login: React.FC = () => {
 
     try {
       await signup(signupEmail, signupPassword, signupName);
-      toast.success('Account created! Please check your email to verify your account.');
+      // Reset form
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
-    } catch (error: any) {
-      console.error('Signup error caught in UI:', error);
-      toast.error(error.message || 'Failed to create account. Please try again.');
+    } catch (error) {
+      console.error('Signup error:', error);
     } finally {
       setSignupLoading(false);
     }
@@ -89,16 +83,18 @@ const Login: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Selamat Datang</CardTitle>
-            <CardDescription>Kelola keuangan Anda dengan mudah</CardDescription>
+            <CardTitle>Welcome to Sistem Administrasi Keuangan</CardTitle>
+            <CardDescription>
+              Manage your finances with ease
+            </CardDescription>
           </CardHeader>
-
+          
           <Tabs defaultValue="login">
             <TabsList className="grid w-full grid-cols-2 mb-4 px-6">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
-
+            
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4">
@@ -116,8 +112,8 @@ const Login: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">Password</Label>
-                      <a
-                        href="#"
+                      <a 
+                        href="#" 
                         className="text-xs text-primary hover:underline"
                         onClick={(e) => {
                           e.preventDefault();
@@ -137,9 +133,9 @@ const Login: React.FC = () => {
                     />
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    <button
-                      type="button"
-                      className="text-primary hover:underline"
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline" 
                       onClick={fillAdminCredentials}
                     >
                       Fill admin credentials for testing
@@ -147,13 +143,13 @@ const Login: React.FC = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={loading || authLoading}>
+                  <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Signing in...' : 'Sign in'}
                   </Button>
                 </CardFooter>
               </form>
             </TabsContent>
-
+            
             <TabsContent value="signup">
               <form onSubmit={handleSignup}>
                 <CardContent className="space-y-4">
@@ -196,7 +192,7 @@ const Login: React.FC = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={signupLoading || authLoading}>
+                  <Button type="submit" className="w-full" disabled={signupLoading}>
                     {signupLoading ? 'Creating account...' : 'Create account'}
                   </Button>
                 </CardFooter>
