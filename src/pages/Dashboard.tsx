@@ -1,15 +1,13 @@
-// src/pages/Dashboard.tsx
-
 import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar';
 import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
-import { getAllData } from '@/data/mockData'; 
-import { useAuth } from '@/contexts/auth/AuthContext.tsx'; // <-- Added /auth and .tsx
+import { getAllData } from '@/data/mockData';
+import { useAuth } from '@/contexts/auth/AuthContext.tsx';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth(); // This should now work
+  const { user } = useAuth();
   const [data, setData] = useState(getAllData());
 
   useEffect(() => {
@@ -17,7 +15,6 @@ const Dashboard: React.FC = () => {
     setData(getAllData());
   }, []);
 
-  // ... rest of the component remains the same
   return (
     <MainLayout>
       <div className="pb-4">
@@ -28,8 +25,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Main stats */}
-
-      {/* Charts and info grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
           <IncomeExpenseChart
