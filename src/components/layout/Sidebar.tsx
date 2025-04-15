@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -16,7 +15,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext.tsx'; // Corrected import path
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Sidebar: React.FC = () => {
@@ -115,7 +114,7 @@ const Sidebar: React.FC = () => {
           <Avatar className="h-10 w-10">
             <AvatarImage src={user?.profileImage || ""} alt={user?.name || ""} />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {user?.name.substring(0, 2).toUpperCase()}
+              {user?.name?.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="ml-3">

@@ -83,9 +83,9 @@ const Login: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Welcome to Sistem Administrasi Keuangan</CardTitle>
+            <CardTitle>Selamat Datang</CardTitle>
             <CardDescription>
-              Manage your finances with ease
+            Kelola keuangan Anda dengan mudah
             </CardDescription>
           </CardHeader>
           

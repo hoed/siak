@@ -1,12 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import DashboardStats from '@/components/dashboard/DashboardStats';
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar';
 import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import { getAllData } from '@/data/mockData';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext.tsx';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -27,14 +25,11 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Main stats */}
-      <DashboardStats summary={data.financialSummary} />
-
-      {/* Charts and info grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
-          <IncomeExpenseChart 
-            monthlyData={data.monthlyChartData} 
-            yearlyData={data.yearlyChartData} 
+          <IncomeExpenseChart
+            monthlyData={data.monthlyChartData}
+            yearlyData={data.yearlyChartData}
           />
         </div>
         <div>
@@ -44,9 +39,9 @@ const Dashboard: React.FC = () => {
 
       {/* Recent transactions */}
       <div className="mb-6">
-        <RecentTransactions 
-          transactions={data.transactions} 
-          categories={data.categories} 
+        <RecentTransactions
+          transactions={data.transactions}
+          categories={data.categories}
         />
       </div>
 
