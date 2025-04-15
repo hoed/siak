@@ -71,13 +71,13 @@ const Login: React.FC = () => {
           <div className="p-3 rounded-full bg-primary/10 mb-2">
             <Wallet className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold">WealthWise</h1>
+          <h1 className="text-3xl font-bold">Sistem Administrasi Keuangan</h1>
           <p className="text-muted-foreground mt-2">Financial Management System</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Welcome to WealthWise</CardTitle>
+            <CardTitle>Welcome to Sistem Administrasi Keuangan</CardTitle>
             <CardDescription>
               Manage your finances with ease
             </CardDescription>
