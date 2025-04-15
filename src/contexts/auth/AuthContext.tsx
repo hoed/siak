@@ -1,8 +1,7 @@
-// src/contexts/auth/AuthContext.tsx
 
 import React, { createContext, useContext, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { User } from './types'; // Assuming types.ts is in the same 'auth' folder
+import { User } from './types';
 
 // Auth context type
 type AuthContextType = {
@@ -26,9 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null
 });
 
-// Custom hook to use the auth context
 export const useAuth = () => useContext(AuthContext);
 
-// Export the context itself if needed elsewhere (e.g., for the Provider)
 export { AuthContext };
-export type { AuthContextType }; // Export the type if needed
+export type { AuthContextType };
