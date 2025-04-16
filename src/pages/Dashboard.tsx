@@ -122,8 +122,7 @@ const Dashboard: React.FC = () => {
         // Fetch debts
         const { data: debtData, error: debtError } = await supabase
           .from('debts')
-          .select('id, description, amount, due_date')
-          .eq('user_id', user.id);
+          .select('id, description, amount, due_date');
 
         console.log('Debts fetch:', { debtData, debtError });
         if (debtError) throw new Error(debtError.message);
@@ -132,8 +131,7 @@ const Dashboard: React.FC = () => {
         // Fetch receivables
         const { data: recvData, error: recvError } = await supabase
           .from('receivables')
-          .select('id, description, amount, due_date')
-          .eq('user_id', user.id);
+          .select('id, description, amount, due_date');
 
         console.log('Receivables fetch:', { recvData, recvError });
         if (recvError) throw new Error(recvError.message);
@@ -150,7 +148,7 @@ const Dashboard: React.FC = () => {
         if (monthlyError) throw new Error(monthlyError.message);
 
         const monthlyAggregated: { month: string; income: number; expense: number }[] = [];
-        monthlyData?.forEach((txn: { date: string; amount: number; type: 'income' | 'expense' }) => {
+        monthlyData?.forEach((txn: any) => {
           const date = new Date(txn.date);
           const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
           let monthEntry = monthlyAggregated.find((m) => m.month === monthKey);
@@ -177,7 +175,7 @@ const Dashboard: React.FC = () => {
         if (yearlyError) throw new Error(yearlyError.message);
 
         const yearlyAggregated: { year: number; income: number; expense: number }[] = [];
-        yearlyData?.forEach((txn: { date: string; amount: number; type: 'income' | 'expense' }) => {
+        yearlyData?.forEach((txn: any) => {
           const year = new Date(txn.date).getFullYear();
           let yearEntry = yearlyAggregated.find((y) => y.year === year);
           if (!yearEntry) {
