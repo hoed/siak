@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -20,16 +20,18 @@ import {
   PlusCircle, Edit, Trash2, ChevronRight, ChevronDown 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types'; // Corrected import path
+import { Database } from '@/integrations/supabase/types';
 
-// Use the generated type from types.ts
+type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 type ChartOfAccount = Database['public']['Tables']['chart_of_accounts']['Row'];
 
 interface ChartOfAccountNode extends ChartOfAccount {
+  id: string;
+  code: string;
   children?: ChartOfAccountNode[];
   level: number;
+  is_active: boolean;
 }
-
 
 const ChartOfAccounts: React.FC = () => {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
@@ -40,18 +42,12 @@ const ChartOfAccounts: React.FC = () => {
   const [accountForm, setAccountForm] = useState({
     code: '',
     name: '',
-    category: '',
-    subcategory: '',
-    cash_flow_relevance: ''
+    type: '',
+    description: '',
+    parent_id: '',
+    is_active: true,
   });
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
-
-  useEffect(() => {
-    const uniqueCategories = [...new Set(accounts.map(account => account.category))];
-    setCategories(uniqueCategories);
-  }, [accounts]);
-
 
   const queryClient = useQueryClient();
 
@@ -71,13 +67,13 @@ const ChartOfAccounts: React.FC = () => {
     const tree: ChartOfAccountNode[] = [];
 
     accounts.forEach(account => {
-      map[account.id] = { ...account, children: [], level: 0 };
+      map[account.id] = { ...account, children: [], level: 0, is_active: account.is_active };
     });
 
     accounts.forEach(account => {
       const node = map[account.id];
-      if (account.subcategory) {
-        const parent = accounts.find(a => a.name === account.subcategory && a.category === account.category);
+      if (account.parent_id) {
+        const parent = accounts.find(a => a.id === account.parent_id);
         if (parent) {
           node.level = 1;
           map[parent.id].children!.push(node);
@@ -97,10 +93,10 @@ const ChartOfAccounts: React.FC = () => {
   const accountTree = React.useMemo(() => buildAccountTree(accounts), [accounts]);
 
   const createAccountMutation = useMutation({
-    mutationFn: async (data: Omit<ChartOfAccount, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (data: Omit<ChartOfAccount, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
       const { error } = await supabase
         .from('chart_of_accounts')
-        .insert([data]);
+        .insert([data as any]);
       if (error) throw new Error(error.message || 'Failed to create account');
     },
     onSuccess: () => {
@@ -152,9 +148,10 @@ const ChartOfAccounts: React.FC = () => {
     setAccountForm({
       code: '',
       name: '',
-      category: '',
-      subcategory: '',
-      cash_flow_relevance: ''
+      type: '',
+      description: '',
+      parent_id: '',
+      is_active: true,
     });
   };
 
@@ -164,9 +161,10 @@ const ChartOfAccounts: React.FC = () => {
     const accountData = {
       code: accountForm.code,
       name: accountForm.name,
-      category: accountForm.category,
-      subcategory: accountForm.subcategory || null,
-      cash_flow_relevance: accountForm.cash_flow_relevance
+      type: accountForm.type,
+      description: accountForm.description || null,
+      parent_id: accountForm.parent_id || null,
+      is_active: accountForm.is_active,
     };
     
     if (editingAccount) {
@@ -184,9 +182,10 @@ const ChartOfAccounts: React.FC = () => {
     setAccountForm({
       code: account.code,
       name: account.name,
-      category: account.category,
-      subcategory: account.subcategory || '',
-      cash_flow_relevance: account.cash_flow_relevance
+      type: account.type,
+      description: account.description || '',
+      parent_id: account.parent_id || '',
+      is_active: account.is_active,
     });
     setIsAddAccountOpen(true);
   };
@@ -224,13 +223,13 @@ const ChartOfAccounts: React.FC = () => {
       
       const rows = [
         <TableRow key={account.id}>
-          <TableCell className="font-medium" key={`${account.id}-code`}>
+          <TableCell className="font-medium">
             <div className="flex items-center">
               <div style={{ width: `${indentation}px` }}></div>
               {hasChildren ? (
                 <button
                   onClick={() => toggleExpand(account.id)}
-                  className="mr-2 p-1 rounded-sm hover:bg-accent focus:outline-none"
+                  className="mr-2 p-1 rounded-sm hover:bg-accent"
                 >
                   {isExpanded ? (
                     <ChevronDown className="h-4 w-4" />
@@ -244,26 +243,26 @@ const ChartOfAccounts: React.FC = () => {
               {account.code}
             </div>
           </TableCell>
-          <TableCell key={`${account.id}-name`}>{account.name}</TableCell>
-          <TableCell key={`${account.id}-category`}>{account.category}</TableCell>
-          <TableCell key={`${account.id}-subcategory`}>{account.subcategory || '-'}</TableCell>
-          <TableCell key={`${account.id}-cash_flow_relevance`}>{account.cash_flow_relevance}</TableCell>
-          <TableCell key={`${account.id}-actions`}>
+          <TableCell>{account.name}</TableCell>
+          <TableCell>{account.type}</TableCell>
+          <TableCell>{account.description || '-'}</TableCell>
+          <TableCell>{account.is_active === true ? 'Yes' : 'No'}</TableCell>
+          <TableCell>
             <div className="flex space-x-2">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleEdit(account)}
               >
-                <Edit className="h-4 w-4" key={`${account.id}-edit`} />
+                <Edit className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleDeleteClick(account.id!)}
+                onClick={() => handleDeleteClick(account.id)}
               >
                 <Trash2 className="h-4 w-4" />
-              </Button> 
+              </Button>
             </div>
           </TableCell>
         </TableRow>
@@ -313,9 +312,9 @@ const ChartOfAccounts: React.FC = () => {
               <TableRow>
                 <TableHead>Kode</TableHead>
                 <TableHead>Nama</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Subkategori</TableHead>
-                <TableHead>Relevansi Arus Kas</TableHead>
+                <TableHead>Tipe</TableHead>
+                <TableHead>Deskripsi</TableHead>
+                <TableHead>Aktif</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -367,37 +366,64 @@ const ChartOfAccounts: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category">Kategori</Label>
+              <Label htmlFor="type">Tipe</Label>
               <Select
-                value={accountForm.category}
-                onValueChange={(value) => setAccountForm({ ...accountForm, category: value })}
+                value={accountForm.type}
+                onValueChange={(value) => setAccountForm({ ...accountForm, type: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori" />
+                  <SelectValue placeholder="Pilih tipe" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  <SelectItem value="Asset">Aset</SelectItem>
+                  <SelectItem value="Liability">Kewajiban</SelectItem>
+                  <SelectItem value="Equity">Ekuitas</SelectItem>
+                  <SelectItem value="Revenue">Pendapatan</SelectItem>
+                  <SelectItem value="Expense">Beban</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Deskripsi</Label>
+              <Input
+                id="description"
+                value={accountForm.description}
+                onChange={(e) => setAccountForm({ ...accountForm, description: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parent_id">Akun Induk</Label>
+              <Select
+                value={accountForm.parent_id}
+                onValueChange={(value) => setAccountForm({ ...accountForm, parent_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih akun induk" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tidak ada</SelectItem>
+                  {accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.code} - {account.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="subcategory">Subkategori</Label>
-              <Input
-                id="subcategory"
-                value={accountForm.subcategory}
-                onChange={(e) => setAccountForm({ ...accountForm, subcategory: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cash_flow_relevance">Relevansi Arus Kas</Label>
-              <Input
-                id="cash_flow_relevance"
-                value={accountForm.cash_flow_relevance}
-                onChange={(e) => setAccountForm({ ...accountForm, cash_flow_relevance: e.target.value })}
-                required
-              />
+              <Label htmlFor="is_active">Aktif</Label>
+              <Select
+                value={accountForm.is_active ? 'true' : 'false'}
+                onValueChange={(value) => setAccountForm({ ...accountForm, is_active: value === 'true' })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Ya</SelectItem>
+                  <SelectItem value="false">Tidak</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="pt-4 space-x-2 flex justify-end">
               <Button 
