@@ -47,32 +47,38 @@ Live demo: [https://sikeu.vercel.app](https://sikeu.vercel.app)
 ```bash
 git clone https://github.com/hoed/siak.git
 cd siak
-npm install
-npm run dev
 
+### **2. Install dependencies**
+Pastikan kamu sudah menginstall Node.js. Lalu jalankan:
+npm install
+
+### **3. Jalankan aplikasi secara lokal**
+npm run dev
+Akses aplikasinya di: http://localhost:5173
+
+---
 🛠️ Pengembangan
 Menambahkan Fitur Baru
 Tambahkan komponen baru di folder src/components
 Tambahkan route atau logika di src/pages
 Simpan data sementara di localStorage atau tambahkan backend jika diperlukan
-
+---
 🌐 Deployment
 SIAK didesain untuk bisa dideploy langsung ke Vercel. Cukup login ke Vercel, connect ke repo GitHub ini, dan klik Deploy. Done!
-
+---
 👥 Hak Akses
-
 Peran	Hak Akses
 Administrator	Semua fitur, termasuk pengelolaan user, pengaturan akun, data master
 Manajemen	Input transaksi, lihat laporan, akses dashboard
-
+---
 📸 Tampilan Dashboard
 Ringkasan total pendapatan & pengeluaran
 Kalender
 Grafik per bulan dan per tahun
 Daftar transaksi terakhir
-
+---
 👨‍💻 Kontribusi
 Pull request sangat diterima. Kalau kamu menemukan bug atau ingin menambahkan fitur, silakan fork dan ajukan PR.
-
+---
 📄 Lisensi
 MIT License © hoed
