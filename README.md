@@ -1,8 +1,3 @@
-Berikut ini adalah **README lengkap dalam satu file Markdown (`README.md`)**, yang bisa langsung kamu **copy-paste seluruhnya sekaligus**:
-
----
-
-```markdown
 # 📊 SIAK — Sistem Informasi Akuntansi Keuangan
 
 **SIAK** adalah aplikasi keuangan berbasis web yang dibangun menggunakan [Vite](https://vitejs.dev/), dan dapat langsung dideploy di [Vercel](https://vercel.com). Aplikasi ini dirancang untuk mengelola keuangan pribadi atau bisnis kecil, dengan fitur-fitur lengkap seperti pencatatan transaksi, laporan keuangan, dan pengelolaan akun.
