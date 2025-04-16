@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Bell, Moon, Search, Sun } from 'lucide-react';
-import { useAuth } from '@/contexts/auth/AuthContext.tsx'; // Corrected import path
+import { useAuth } from '@/contexts/auth/AuthContext'; // Fixed import path
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {

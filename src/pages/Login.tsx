@@ -78,21 +78,21 @@ const Login: React.FC = () => {
             <Wallet className="h-8 w-8 text-primary" />
           </div>
           <h1 className="text-3xl font-bold">Sistem Administrasi Keuangan</h1>
-          <p className="text-muted-foreground mt-2">Financial Management System</p>
+          <p className="text-muted-foreground mt-2">Sistem Manajemen Keuangan</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Selamat Datang</CardTitle>
             <CardDescription>
-            Kelola keuangan Anda dengan mudah
+              Kelola keuangan Anda dengan mudah
             </CardDescription>
           </CardHeader>
           
           <Tabs defaultValue="login">
             <TabsList className="grid w-full grid-cols-2 mb-4 px-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="login">Masuk</TabsTrigger>
+              <TabsTrigger value="signup">Daftar</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
@@ -103,7 +103,7 @@ const Login: React.FC = () => {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="your.email@example.com"
+                      placeholder="email.anda@contoh.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -111,16 +111,16 @@ const Login: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">Kata Sandi</Label>
                       <a 
                         href="#" 
                         className="text-xs text-primary hover:underline"
                         onClick={(e) => {
                           e.preventDefault();
-                          toast.info('Password reset functionality will be implemented soon.');
+                          toast.info('Fungsi reset kata sandi akan segera diimplementasikan.');
                         }}
                       >
-                        Forgot password?
+                        Lupa kata sandi?
                       </a>
                     </div>
                     <Input
@@ -138,13 +138,13 @@ const Login: React.FC = () => {
                       className="text-primary hover:underline" 
                       onClick={fillAdminCredentials}
                     >
-                      Fill admin credentials for testing
+                      Isi kredensial admin untuk pengujian
                     </button>
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Signing in...' : 'Sign in'}
+                    {loading ? 'Masuk...' : 'Masuk'}
                   </Button>
                 </CardFooter>
               </form>
@@ -154,7 +154,7 @@ const Login: React.FC = () => {
               <form onSubmit={handleSignup}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label htmlFor="signup-name">Nama Lengkap</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -169,14 +169,14 @@ const Login: React.FC = () => {
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="your.email@example.com"
+                      placeholder="email.anda@contoh.com"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">Kata Sandi</Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -187,13 +187,13 @@ const Login: React.FC = () => {
                       minLength={6}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Password must be at least 6 characters
+                      Kata sandi harus minimal 6 karakter
                     </p>
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full" disabled={signupLoading}>
-                    {signupLoading ? 'Creating account...' : 'Create account'}
+                    {signupLoading ? 'Membuat akun...' : 'Buat Akun'}
                   </Button>
                 </CardFooter>
               </form>

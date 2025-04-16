@@ -9,6 +9,7 @@ import { AuthProvider, RequireAuth } from "./contexts/auth";
 // Pages
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import ChartOfAccounts from "./pages/ChartOfAccounts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,11 @@ const App = () => (
             <Route path="/dashboard" element={
               <RequireAuth>
                 <Dashboard />
+              </RequireAuth>
+            } />
+            <Route path="/chart-of-accounts" element={
+              <RequireAuth>
+                <ChartOfAccounts />
               </RequireAuth>
             } />
             

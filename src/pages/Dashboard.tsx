@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar';
 import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import { getAllData } from '@/data/mockData';
-import { useAuth } from '@/contexts/auth/AuthContext.tsx';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ const Dashboard: React.FC = () => {
       <div className="pb-4">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome back, {user?.name}! Here's an overview of your finances.
+          Selamat datang kembali, {user?.name}! Berikut ringkasan keuangan Anda.
         </p>
       </div>
 
@@ -49,49 +50,49 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="dashboard-card">
           <div className="dashboard-card-header">
-            <h3 className="dashboard-card-title">Upcoming Payments</h3>
+            <h3 className="dashboard-card-title">Pembayaran Akan Datang</h3>
           </div>
           <div className="dashboard-card-body space-y-3">
             {data.financialSummary.upcomingDebts.map((debt) => (
               <div key={debt.id} className="flex justify-between items-center pb-2 border-b">
                 <div>
                   <p className="font-medium text-sm">{debt.description}</p>
-                  <p className="text-xs text-muted-foreground">Due to {debt.personName}</p>
+                  <p className="text-xs text-muted-foreground">Kepada {debt.personName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-finance-expense">${debt.amount.toFixed(2)}</p>
+                  <p className="font-medium text-finance-expense">Rp{debt.amount.toLocaleString('id-ID')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {debt.dueDate ? new Date(debt.dueDate).toLocaleDateString() : 'No date'}
+                    {debt.dueDate ? new Date(debt.dueDate).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
                   </p>
                 </div>
               </div>
             ))}
             {data.financialSummary.upcomingDebts.length === 0 && (
-              <p className="text-muted-foreground text-center py-3">No upcoming payments</p>
+              <p className="text-muted-foreground text-center py-3">Tidak ada pembayaran akan datang</p>
             )}
           </div>
         </div>
         <div className="dashboard-card">
           <div className="dashboard-card-header">
-            <h3 className="dashboard-card-title">Incoming Payments</h3>
+            <h3 className="dashboard-card-title">Penerimaan Akan Datang</h3>
           </div>
           <div className="dashboard-card-body space-y-3">
             {data.financialSummary.upcomingReceivables.map((receivable) => (
               <div key={receivable.id} className="flex justify-between items-center pb-2 border-b">
                 <div>
                   <p className="font-medium text-sm">{receivable.description}</p>
-                  <p className="text-xs text-muted-foreground">From {receivable.personName}</p>
+                  <p className="text-xs text-muted-foreground">Dari {receivable.personName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-finance-income">${receivable.amount.toFixed(2)}</p>
+                  <p className="font-medium text-finance-income">Rp{receivable.amount.toLocaleString('id-ID')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {receivable.dueDate ? new Date(receivable.dueDate).toLocaleDateString() : 'No date'}
+                    {receivable.dueDate ? new Date(receivable.dueDate).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
                   </p>
                 </div>
               </div>
             ))}
             {data.financialSummary.upcomingReceivables.length === 0 && (
-              <p className="text-muted-foreground text-center py-3">No incoming payments</p>
+              <p className="text-muted-foreground text-center py-3">Tidak ada penerimaan akan datang</p>
             )}
           </div>
         </div>

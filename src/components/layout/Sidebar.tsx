@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -12,10 +13,11 @@ import {
   Settings,
   CreditCard,
   CalendarClock,
-  LogOut
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth/AuthContext.tsx'; // Corrected import path
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Sidebar: React.FC = () => {
@@ -34,62 +36,68 @@ const Sidebar: React.FC = () => {
       roles: ['admin', 'manager']
     },
     { 
+      icon: <BookOpen size={20} />, 
+      name: 'Bagan Akun', 
+      path: '/chart-of-accounts',
+      roles: ['admin', 'manager']
+    },
+    { 
       icon: <ArrowUpCircle size={20} />, 
-      name: 'Income', 
+      name: 'Pendapatan', 
       path: '/income',
       roles: ['admin', 'manager']
     },
     { 
       icon: <ArrowDownCircle size={20} />, 
-      name: 'Expenses', 
+      name: 'Pengeluaran', 
       path: '/expenses',
       roles: ['admin', 'manager']
     },
     { 
       icon: <ArrowLeftRight size={20} />, 
-      name: 'Transactions', 
+      name: 'Transaksi', 
       path: '/transactions',
       roles: ['admin', 'manager']
     },
     { 
       icon: <CalendarClock size={20} />, 
-      name: 'Debts', 
+      name: 'Hutang', 
       path: '/debts',
       roles: ['admin', 'manager']
     },
     { 
       icon: <CalendarClock size={20} />, 
-      name: 'Receivables', 
+      name: 'Piutang', 
       path: '/receivables',
       roles: ['admin', 'manager']
     },
     { 
       icon: <CreditCard size={20} />, 
-      name: 'Accounts', 
+      name: 'Akun Bank', 
       path: '/accounts',
       roles: ['admin', 'manager']
     },
     { 
       icon: <FileText size={20} />, 
-      name: 'Reports', 
+      name: 'Laporan', 
       path: '/reports',
       roles: ['admin', 'manager']
     },
     { 
       icon: <PieChart size={20} />, 
-      name: 'Categories', 
+      name: 'Kategori', 
       path: '/categories',
       roles: ['admin', 'manager']
     },
     { 
       icon: <Users size={20} />, 
-      name: 'Users', 
+      name: 'Pengguna', 
       path: '/users',
       roles: ['admin']
     },
     { 
       icon: <Settings size={20} />, 
-      name: 'Settings', 
+      name: 'Pengaturan', 
       path: '/settings',
       roles: ['admin', 'manager']
     },
@@ -105,7 +113,7 @@ const Sidebar: React.FC = () => {
       {/* Logo and app name */}
       <div className="p-6 flex items-center justify-center">
         <Wallet className="mr-2 text-primary" size={28} />
-        <h1 className="text-xl font-bold">WealthWise</h1>
+        <h1 className="text-xl font-bold">SisKeu</h1>
       </div>
 
       {/* User profile area */}
@@ -119,7 +127,9 @@ const Sidebar: React.FC = () => {
           </Avatar>
           <div className="ml-3">
             <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-sidebar-foreground/70 capitalize">{user?.role}</p>
+            <p className="text-xs text-sidebar-foreground/70 capitalize">
+              {user?.role === 'admin' ? 'Administrator' : 'Manajer'}
+            </p>
           </div>
         </div>
       </div>
@@ -153,7 +163,7 @@ const Sidebar: React.FC = () => {
           className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent/50 transition-colors"
         >
           <LogOut size={20} className="mr-3" />
-          Logout
+          Keluar
         </button>
       </div>
     </div>
