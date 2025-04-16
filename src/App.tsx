@@ -5,14 +5,11 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, RequireAuth } from '@/contexts/auth';
-import { Analytics } from "@vercel/analytics/react"
-
-// Pages
 import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
+import Dashboard from '@/pages/Dashboard'; // Updated path
+import ChartOfAccounts from '@/pages/ChartOfAccounts';
 import NotFound from '@/pages/NotFound';
 
-// Initialize QueryClient
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -23,7 +20,6 @@ const queryClient = new QueryClient({
 });
 
 const App: React.FC = () => {
-  // Debug routing
   useEffect(() => {
     console.log('App rendered, path:', window.location.pathname);
   }, []);
@@ -43,6 +39,14 @@ const App: React.FC = () => {
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chart-of-accounts"
+                element={
+                  <RequireAuth>
+                    <ChartOfAccounts />
                   </RequireAuth>
                 }
               />

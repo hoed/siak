@@ -1,236 +1,179 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import DashboardStats from '@/components/dashboard/DashboardStats';
+import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
+import DashboardCalendar from '@/components/dashboard/DashboardCalendar';
+import RecentTransactions from '@/components/dashboard/RecentTransactions';
+import { Database } from '@/integrations/supabase/types';
 
-// Placeholder components
-const IncomeExpenseChart: React.FC<{
-  monthlyData: { month: string; income: number; expense: number }[];
-  yearlyData: { year: number; income: number; expense: number }[];
-}> = ({ monthlyData, yearlyData }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Income vs Expense</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p>Monthly: {JSON.stringify(monthlyData)}</p>
-      <p>Yearly: {JSON.stringify(yearlyData)}</p>
-    </CardContent>
-  </Card>
-);
+// Use Supabase-generated types
+type TransactionRow = Database['public']['Tables']['transactions']['Row'];
+type CategoryRow = Database['public']['Tables']['categories']['Row'];
 
-const DashboardCalendar: React.FC<{
-  transactions: { id: string; date: string; description: string; amount: number }[];
-}> = ({ transactions }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Transaction Calendar</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p>Transactions: {transactions.length}</p>
-    </CardContent>
-  </Card>
-);
-
-const RecentTransactions: React.FC<{
-  transactions: { id: string; description: string; amount: number; date: string; category_id: string }[];
-  categories: string[];
-}> = ({ transactions }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Recent Transactions</CardTitle>
-    </CardHeader>
-    <CardContent>
-      {transactions.map((txn) => (
-        <p key={txn.id}>
-          {txn.description}: Rp{txn.amount.toLocaleString('id-ID')} ({txn.date})
-        </p>
-      ))}
-    </CardContent>
-  </Card>
-);
-
-interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  category_id: string;
-  account_id?: string;
-  created_at?: string;
-  created_by?: string;
-  type?: 'income' | 'expense';
-  updated_at?: string;
-}
-
-interface DebtReceivable {
-  id: string;
-  description: string;
-  amount: number;
-  due_date: string;
+// Define FinancialSummary to match DashboardStatsProps
+interface FinancialSummary {
+  totalIncome: {
+    month: number;
+  };
+  totalExpense: {
+    month: number;
+  };
+  balance: number;
+  recentTransactions: TransactionRow[];
+  upcomingReceivables: any[]; // Adjust based on your schema (e.g., receivables type)
 }
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [debts, setDebts] = useState<DebtReceivable[]>([]);
-  const [receivables, setReceivables] = useState<DebtReceivable[]>([]);
-  const [monthlyChartData, setMonthlyChartData] = useState<
-    { month: string; income: number; expense: number }[]
-  >([]);
-  const [yearlyChartData, setYearlyChartData] = useState<
-    { year: number; income: number; expense: number }[]
-  >([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<any | null>(null);
+  const [yearlyData, setYearlyData] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [calendarTransactions, setCalendarTransactions] = useState<TransactionRow[]>([]);
+  const [recentTransactionsData, setRecentTransactionsData] = useState<TransactionRow[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) {
-        setError('User not authenticated');
-        setLoading(false);
-        return;
-      }
-
+    const fetchDashboardData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
+        // Fetch financial summary
+        const { data: incomeData } = await supabase
+        .from('transactions')
+        .select('amount, date')
+        .eq('type', 'income')
+        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        .lte('date', new Date().toISOString());
 
-        // Fetch transactions
-        const { data: txnData, error: txnError } = await supabase
+        const { data: expenseData } = await supabase
+        .from('transactions')
+        .select('amount, date')
+        .eq('type', 'expense')
+        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        .lte('date', new Date().toISOString());
+
+        const totalIncome = incomeData?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
+        const totalExpense = expenseData?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
+
+        const { data: allIncomeData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'income');
+        const { data: allExpenseData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'expense');
+        const netIncome = totalIncome - totalExpense;
+
+        // Fetch recent transactions (adjust limit as needed)
+        const { data: recentTxns } = await supabase
           .from('transactions')
-          .select('id, description, amount, date, category_id, account_id, created_at, created_by, type, updated_at')
-          .eq('created_by', user.id)
+          .select('*')
           .order('date', { ascending: false })
-          .limit(50);
+          .limit(5);
 
-        console.log('Transactions fetch:', { txnData, txnError });
-        if (txnError) throw new Error(txnError.message);
-        setTransactions(txnData || []);
+        // Fetch upcoming receivables (example, adjust based on your schema)
+        const { data: receivables } = await supabase
+          .from('receivables')
+          .select('*')
+          .gte('due_date', new Date().toISOString().split('T')[0]);
+
+        setSummary({
+          totalIncome: {
+            month: totalIncome,
+          },
+          totalExpense: {
+            month: totalExpense,
+          },
+          recentTransactions: recentTxns || [],
+          upcomingReceivables: receivables || [],
+        });
+
+        // Fetch yearly data (convert year to string)
+        const { data: yearlyTxns } = await supabase
+          .from('transactions')
+          .select('date, amount, type')
+          .gte('date', new Date(new Date().getFullYear() - 1, 0, 1).toISOString())
+          .lte('date', new Date().toISOString());
+        const yearlySummary = yearlyTxns?.reduce((acc, txn) => {
+          const year = new Date(txn.date).getFullYear().toString();
+          if (!acc[year]) acc[year] = { year, income: 0, expense: 0 };
+          acc[year][txn.type === 'income' ? 'income' : 'expense'] += txn.amount;
+          return acc;
+        }, {} as { [key: string]: { year: string; income: number; expense: number } });
+        setYearlyData(Object.values(yearlySummary));
+
+        // Fetch monthly data
+        const { data: monthlyTxns } = await supabase
+          .from('transactions')
+          .select('date, amount, type')
+          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth() - 11, 1).toISOString())
+          .lte('date', new Date().toISOString());
+        const monthlySummary = monthlyTxns?.reduce((acc, txn) => {
+          const month = new Date(txn.date).toLocaleString('default', { month: 'short' });
+          if (!acc[month]) acc[month] = { month, income: 0, expense: 0 };
+          acc[month][txn.type === 'income' ? 'income' : 'expense'] += txn.amount;
+          return acc;
+        }, {} as { [key: string]: { month: string; income: number; expense: number } });
+        setMonthlyData(Object.values(monthlySummary));
+
+
+        // Fetch transactions for calendar
+        const { data: calendarTxns } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(30);
+        setCalendarTransactions(calendarTxns || []);
+
+        // Fetch recent transactions for display
+        const { data: recentData } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(5);
+        setRecentTransactionsData(recentData || []);
 
         // Fetch categories
-        const { data: catData, error: catError } = await supabase
+        const { data: categoriesData } = await supabase
           .from('categories')
-          .select('name');
-
-        console.log('Categories fetch:', { catData, catError });
-        if (catError) throw new Error(catError.message);
-        setCategories(catData?.map((c: any) => c.name) || []);
-
-        // Fetch debts
-        const { data: debtData, error: debtError } = await supabase
-          .from('debts')
-          .select('id, description, amount, due_date');
-
-        console.log('Debts fetch:', { debtData, debtError });
-        if (debtError) throw new Error(debtError.message);
-        setDebts(debtData || []);
-
-        // Fetch receivables
-        const { data: recvData, error: recvError } = await supabase
-          .from('receivables')
-          .select('id, description, amount, due_date');
-
-        console.log('Receivables fetch:', { recvData, recvError });
-        if (recvError) throw new Error(recvError.message);
-        setReceivables(recvData || []);
-
-        // Aggregate monthly chart data
-        const { data: monthlyData, error: monthlyError } = await supabase
-          .from('transactions')
-          .select('date, amount, type')
-          .eq('created_by', user.id)
-          .gte('date', new Date(new Date().setMonth(new Date().getMonth() - 12)).toISOString());
-
-        console.log('Monthly data fetch:', { monthlyData, monthlyError });
-        if (monthlyError) throw new Error(monthlyError.message);
-
-        const monthlyAggregated: { month: string; income: number; expense: number }[] = [];
-        monthlyData?.forEach((txn: any) => {
-          const date = new Date(txn.date);
-          const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-          let monthEntry = monthlyAggregated.find((m) => m.month === monthKey);
-          if (!monthEntry) {
-            monthEntry = { month: monthKey, income: 0, expense: 0 };
-            monthlyAggregated.push(monthEntry);
-          }
-          if (txn.type === 'income') {
-            monthEntry.income += txn.amount;
-          } else {
-            monthEntry.expense += txn.amount;
-          }
-        });
-        setMonthlyChartData(monthlyAggregated);
-
-        // Aggregate yearly chart data
-        const { data: yearlyData, error: yearlyError } = await supabase
-          .from('transactions')
-          .select('date, amount, type')
-          .eq('created_by', user.id)
-          .gte('date', new Date(new Date().setFullYear(new Date().getFullYear() - 5)).toISOString());
-
-        console.log('Yearly data fetch:', { yearlyData, yearlyError });
-        if (yearlyError) throw new Error(yearlyError.message);
-
-        const yearlyAggregated: { year: number; income: number; expense: number }[] = [];
-        yearlyData?.forEach((txn: any) => {
-          const year = new Date(txn.date).getFullYear();
-          let yearEntry = yearlyAggregated.find((y) => y.year === year);
-          if (!yearEntry) {
-            yearEntry = { year, income: 0, expense: 0 };
-            yearlyAggregated.push(yearEntry);
-          }
-          if (txn.type === 'income') {
-            yearEntry.income += txn.amount;
-          } else {
-            yearEntry.expense += txn.amount;
-          }
-        });
-        setYearlyChartData(yearlyAggregated);
-
-      } catch (err: any) {
-        console.error('Dashboard fetch error:', err);
-        setError(err.message || 'Failed to load data');
+          .select('*');
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [user]);
+    fetchDashboardData();
+  }, []);
 
-  // Debug state
-  useEffect(() => {
-    console.log('Dashboard state:', {
-      user,
-      transactions,
-      categories,
-      debts,
-      receivables,
-      monthlyChartData,
-      yearlyChartData,
-      loading,
-      error,
-    });
-  }, [user, transactions, categories, debts, receivables, monthlyChartData, yearlyChartData, loading, error]);
+  const balance = useMemo(() => {
+    if (!summary) return 0;
+    const totalIncome = summary.totalIncome.month;
+    const totalExpense = summary.totalExpense.month;
+    return totalIncome - totalExpense;
+  }, [summary]);
 
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex justify-center items-center h-full">
+        <div className="flex justify-center items-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </MainLayout>
     );
   }
 
-  if (error) {
+  if (!user) {
     return (
       <MainLayout>
         <div className="p-4 bg-red-100 text-red-700 rounded">
-          Error: {error}
+          Please log in to view the dashboard.
         </div>
       </MainLayout>
     );
@@ -238,73 +181,35 @@ const Dashboard: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="pb-4">
+      <div className="space-y-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Selamat datang kembali, {user?.name || 'User'}! Berikut ringkasan keuangan Anda.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <IncomeExpenseChart monthlyData={monthlyChartData} yearlyData={yearlyChartData} />
+        {summary && (
+          <DashboardStats summary={summary} />
+          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <IncomeExpenseChart monthlyData={monthlyData} yearlyData={yearlyData} />
+          <DashboardCalendar
+            transactions={calendarTransactions.map(transaction => ({
+              ...transaction,
+              categoryId: transaction.category_id,
+              accountId: transaction.account_id,
+              createdBy: transaction.created_by,
+              createdAt: transaction.created_at,
+              updatedAt: transaction.updated_at,
+            }))}
+          />
         </div>
-        <div>
-          <DashboardCalendar transactions={transactions} />
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <RecentTransactions transactions={transactions} categories={categories} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pembayaran Akan Datang</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {debts.map((debt) => (
-              <div key={debt.id} className="flex justify-between items-center pb-2 border-b">
-                <div>
-                  <p className="font-medium text-sm">{debt.description}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-red-600">Rp{debt.amount.toLocaleString('id-ID')}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {debt.due_date ? new Date(debt.due_date).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {debts.length === 0 && (
-              <p className="text-muted-foreground text-center py-3">Tidak ada pembayaran akan datang</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Penerimaan Akan Datang</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {receivables.map((receivable) => (
-              <div key={receivable.id} className="flex justify-between items-center pb-2 border-b">
-                <div>
-                  <p className="font-medium text-sm">{receivable.description}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-green-600">Rp{receivable.amount.toLocaleString('id-ID')}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {receivable.due_date ? new Date(receivable.due_date).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {receivables.length === 0 && (
-              <p className="text-muted-foreground text-center py-3">Tidak ada penerimaan akan datang</p>
-            )}
-          </CardContent>
-        </Card>
+        <RecentTransactions
+          transactions={recentTransactionsData.map(transaction => ({
+            ...transaction,
+            categoryId: transaction.category_id,
+            accountId: transaction.account_id,
+            createdBy: transaction.created_by,
+            createdAt: transaction.created_at,
+            updatedAt: transaction.updated_at,
+          }))}
+          categories={categories}
+        />
       </div>
     </MainLayout>
   );
