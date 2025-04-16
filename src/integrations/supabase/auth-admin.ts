@@ -184,18 +184,7 @@ export const createTestUsers = async () => {
       console.log('Manager user already exists');
     }
 
-    // Alternative: Create users directly with SQL if needed
-    try {
-      // Create admin user
-      await supabase.rpc('create_test_admin_user');
-      console.log('Admin user created via RPC');
-      
-      // Create accountant user
-      await supabase.rpc('create_test_accountant_user');
-      console.log('Accountant user created via RPC');
-    } catch (rpcError) {
-      console.log('RPC method not available, skipping', rpcError);
-    }
+    // Note: Removed the RPC calls that were causing errors
 
     return { success: true };
   } catch (error) {

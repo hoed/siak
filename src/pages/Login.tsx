@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -10,6 +9,8 @@ import { Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initializeTestUsers, directSignInAsAdmin } from '@/integrations/supabase/auth-admin';
+import { importChartOfAccounts } from '@/services/coaImportService';
+import { chartOfAccountsData } from '@/data/chartOfAccountsData';
 
 const Login: React.FC = () => {
   // Login form state
@@ -25,6 +26,9 @@ const Login: React.FC = () => {
   
   // Creating test users state
   const [creatingTestUsers, setCreatingTestUsers] = useState(false);
+  
+  // Importing CoA state
+  const [importingCoA, setImportingCoA] = useState(false);
   
   // Auth state
   const { login, signup, user } = useAuth();
@@ -110,6 +114,24 @@ const Login: React.FC = () => {
       toast.error(`Login langsung gagal: ${error.message || 'Terjadi kesalahan'}`);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Import Chart of Accounts
+  const handleImportCoA = async () => {
+    setImportingCoA(true);
+    try {
+      const result = await importChartOfAccounts(chartOfAccountsData);
+      if (result) {
+        toast.success('Chart of Accounts berhasil diimpor!');
+      } else {
+        toast.error('Gagal mengimpor Chart of Accounts');
+      }
+    } catch (error: any) {
+      console.error('Import CoA error:', error);
+      toast.error(`Gagal mengimpor Chart of Accounts: ${error.message || 'Terjadi kesalahan'}`);
+    } finally {
+      setImportingCoA(false);
     }
   };
 
