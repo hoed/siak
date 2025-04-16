@@ -1,4 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { ChartOfAccount, ChartOfAccountNode } from '@/types/accounting';
 import { toast } from 'sonner';
 
@@ -17,7 +19,7 @@ interface ChartOfAccountDB {
 // ============= Chart of Accounts API =============
 export const getChartOfAccounts = async (): Promise<ChartOfAccount[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await extendedSupabase
       .from('chart_of_accounts')
       .select('*')
       .order('code') as { data: ChartOfAccountDB[], error: any };
@@ -43,7 +45,7 @@ export const getChartOfAccounts = async (): Promise<ChartOfAccount[]> => {
 
 export const createChartOfAccount = async (account: Omit<ChartOfAccount, 'id' | 'createdAt' | 'updatedAt'>): Promise<ChartOfAccount | null> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await extendedSupabase
       .from('chart_of_accounts')
       .insert({
         code: account.code,
@@ -79,7 +81,7 @@ export const createChartOfAccount = async (account: Omit<ChartOfAccount, 'id' | 
 
 export const updateChartOfAccount = async (id: string, account: Partial<Omit<ChartOfAccount, 'id' | 'createdAt' | 'updatedAt'>>): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await extendedSupabase
       .from('chart_of_accounts')
       .update({
         code: account.code,
@@ -103,7 +105,7 @@ export const updateChartOfAccount = async (id: string, account: Partial<Omit<Cha
 
 export const deleteChartOfAccount = async (id: string): Promise<boolean> => {
   try {
-    const { data: children, error: childrenError } = await supabase
+    const { data: children, error: childrenError } = await extendedSupabase
       .from('chart_of_accounts')
       .select('id')
       .eq('parent_id', id) as { data: any[], error: any };
@@ -115,7 +117,7 @@ export const deleteChartOfAccount = async (id: string): Promise<boolean> => {
       return false;
     }
     
-    const { error } = await supabase
+    const { error } = await extendedSupabase
       .from('chart_of_accounts')
       .delete()
       .eq('id', id) as { error: any };
