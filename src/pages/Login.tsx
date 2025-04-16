@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { initializeTestUsers, directSignInAsAdmin } from '@/integrations/supabase/auth-admin';
 
 const Login: React.FC = () => {
   // Login form state
@@ -21,6 +22,9 @@ const Login: React.FC = () => {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupLoading, setSignupLoading] = useState(false);
+  
+  // Creating test users state
+  const [creatingTestUsers, setCreatingTestUsers] = useState(false);
   
   // Auth state
   const { login, signup, user } = useAuth();
@@ -38,10 +42,13 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting login with:', email, password);
       await login(email, password);
       // Navigation handled in AuthContext
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
+      toast.error(`Login gagal: ${error.message || 'Terjadi kesalahan'}`);
+    } finally {
       setLoading(false);
     }
   };
@@ -56,8 +63,10 @@ const Login: React.FC = () => {
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
-    } catch (error) {
+      toast.success('Pendaftaran berhasil! Silahkan periksa email Anda untuk konfirmasi akun.');
+    } catch (error: any) {
       console.error('Signup error:', error);
+      toast.error(`Pendaftaran gagal: ${error.message || 'Terjadi kesalahan'}`);
     } finally {
       setSignupLoading(false);
     }
@@ -67,6 +76,41 @@ const Login: React.FC = () => {
   const fillAdminCredentials = () => {
     setEmail('admin@example.com');
     setPassword('admin123');
+  };
+  
+  // Create test users for development
+  const handleCreateTestUsers = async () => {
+    setCreatingTestUsers(true);
+    try {
+      const result = await initializeTestUsers();
+      if (result.success) {
+        toast.success('Pengguna test berhasil dibuat!');
+        fillAdminCredentials();
+      } else {
+        toast.error('Gagal membuat pengguna test');
+      }
+    } catch (error: any) {
+      console.error('Create test users error:', error);
+      toast.error(`Gagal membuat pengguna test: ${error.message || 'Terjadi kesalahan'}`);
+    } finally {
+      setCreatingTestUsers(false);
+    }
+  };
+  
+  // Direct admin login (development only)
+  const handleDirectAdminLogin = async () => {
+    setLoading(true);
+    try {
+      const result = await directSignInAsAdmin();
+      if (result.success) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Direct admin login error:', error);
+      toast.error(`Login langsung gagal: ${error.message || 'Terjadi kesalahan'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -132,13 +176,29 @@ const Login: React.FC = () => {
                       required
                     />
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="flex flex-col space-y-2 text-xs text-muted-foreground">
                     <button 
                       type="button" 
-                      className="text-primary hover:underline" 
+                      className="text-primary hover:underline text-left" 
                       onClick={fillAdminCredentials}
                     >
                       Isi kredensial admin untuk pengujian
+                    </button>
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline text-left" 
+                      onClick={handleCreateTestUsers}
+                      disabled={creatingTestUsers}
+                    >
+                      {creatingTestUsers ? 'Membuat pengguna test...' : 'Buat pengguna test'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline text-left" 
+                      onClick={handleDirectAdminLogin}
+                      disabled={loading}
+                    >
+                      Login langsung sebagai admin
                     </button>
                   </div>
                 </CardContent>

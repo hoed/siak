@@ -76,11 +76,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         console.error('No profile found for user:', userId);
-        toast.error('User profile not found');
+        
+        // Check if we can create the profile from user metadata
+        const { data: userData } = await supabase.auth.getUser();
+        const metadata = userData?.user?.user_metadata;
+        
+        if (metadata?.name && metadata?.role) {
+          console.log('Creating profile from metadata:', metadata);
+          // Create profile from metadata
+          await supabase.from('profiles').insert({
+            id: userId,
+            name: metadata.name,
+            email: userData.user.email,
+            role: metadata.role
+          });
+          
+          setUser({
+            id: userId,
+            name: metadata.name,
+            email: userData.user.email || '',
+            role: metadata.role as 'admin' | 'manager',
+            profileImage: undefined
+          });
+        } else {
+          toast.error('Profil pengguna tidak ditemukan');
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      toast.error('Failed to load user profile');
+      toast.error('Gagal memuat profil pengguna');
     } finally {
       setLoading(false);
     }
@@ -102,11 +126,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('Login successful:', data);
-      toast.success('Login successful!');
+      toast.success('Login berhasil!');
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
-      toast.error('Login failed: ' + error.message);
+      
+      // Translate common Supabase errors
+      let errorMessage = 'Login gagal';
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Email atau kata sandi tidak valid';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Email belum dikonfirmasi. Periksa kotak masuk email Anda.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
       setLoading(false);
       throw error;
     }
@@ -122,7 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           data: {
-            name
+            name,
+            role: 'manager' // Default role for new users
           }
         }
       });
@@ -131,12 +167,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      toast.success('Registration successful! Please check your email to confirm your account.');
+      // If auto-confirmation is enabled, also create the profile right away
+      if (data.user && !data.session) {
+        // Email confirmation required
+        toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun.');
+      } else if (data.user && data.session) {
+        // Auto-confirmed, create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            name: name,
+            email: email,
+            role: 'manager' // Default role for new users
+          });
+          
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          toast.error('Pendaftaran berhasil tetapi gagal membuat profil');
+        } else {
+          toast.success('Pendaftaran berhasil! Anda akan diarahkan ke dashboard.');
+          navigate('/dashboard');
+        }
+      }
       
-      // Don't automatically log in as we likely need email verification
       setLoading(false);
     } catch (error: any) {
-      toast.error('Registration failed: ' + error.message);
+      let errorMessage = 'Pendaftaran gagal';
+      
+      if (error.message.includes('already registered')) {
+        errorMessage = 'Email sudah terdaftar';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
       setLoading(false);
       throw error;
     }
@@ -147,9 +212,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       navigate('/login');
-      toast.info('You have been logged out');
+      toast.info('Anda telah keluar');
     } catch (error: any) {
-      toast.error('Logout failed: ' + error.message);
+      toast.error(`Gagal keluar: ${error.message}`);
     }
   };
 
@@ -173,9 +238,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Update local state
       setUser(prev => prev ? { ...prev, ...userData } : null);
-      toast.success('Profile updated successfully');
+      toast.success('Profil berhasil diperbarui');
     } catch (error: any) {
-      toast.error('Failed to update profile: ' + error.message);
+      toast.error(`Gagal memperbarui profil: ${error.message}`);
     }
   };
 

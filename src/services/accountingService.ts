@@ -1,7 +1,18 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ChartOfAccount, ChartOfAccountNode } from '@/types/accounting';
 import { toast } from 'sonner';
+
+interface ChartOfAccountDB {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  description?: string;
+  parent_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 // ============= Chart of Accounts API =============
 export const getChartOfAccounts = async (): Promise<ChartOfAccount[]> => {
@@ -9,7 +20,7 @@ export const getChartOfAccounts = async (): Promise<ChartOfAccount[]> => {
     const { data, error } = await supabase
       .from('chart_of_accounts')
       .select('*')
-      .order('code');
+      .order('code') as { data: ChartOfAccountDB[], error: any };
       
     if (error) throw error;
     
@@ -17,7 +28,7 @@ export const getChartOfAccounts = async (): Promise<ChartOfAccount[]> => {
       id: account.id,
       code: account.code,
       name: account.name,
-      type: account.type,
+      type: account.type as any,
       description: account.description || undefined,
       parentId: account.parent_id || undefined,
       isActive: account.is_active,
@@ -43,7 +54,7 @@ export const createChartOfAccount = async (account: Omit<ChartOfAccount, 'id' | 
         is_active: account.isActive
       })
       .select()
-      .single();
+      .single() as { data: ChartOfAccountDB, error: any };
       
     if (error) throw error;
     
@@ -53,7 +64,7 @@ export const createChartOfAccount = async (account: Omit<ChartOfAccount, 'id' | 
       id: data.id,
       code: data.code,
       name: data.name,
-      type: data.type,
+      type: data.type as any,
       description: data.description || undefined,
       parentId: data.parent_id || undefined,
       isActive: data.is_active,
@@ -78,7 +89,7 @@ export const updateChartOfAccount = async (id: string, account: Partial<Omit<Cha
         parent_id: account.parentId,
         is_active: account.isActive !== undefined ? account.isActive : true
       })
-      .eq('id', id);
+      .eq('id', id) as { error: any };
       
     if (error) throw error;
     
@@ -92,11 +103,10 @@ export const updateChartOfAccount = async (id: string, account: Partial<Omit<Cha
 
 export const deleteChartOfAccount = async (id: string): Promise<boolean> => {
   try {
-    // Check if account has children
     const { data: children, error: childrenError } = await supabase
       .from('chart_of_accounts')
       .select('id')
-      .eq('parent_id', id);
+      .eq('parent_id', id) as { data: any[], error: any };
       
     if (childrenError) throw childrenError;
     
@@ -108,7 +118,7 @@ export const deleteChartOfAccount = async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from('chart_of_accounts')
       .delete()
-      .eq('id', id);
+      .eq('id', id) as { error: any };
       
     if (error) throw error;
     
@@ -120,11 +130,9 @@ export const deleteChartOfAccount = async (id: string): Promise<boolean> => {
   }
 };
 
-// Helper function to build a hierarchical tree of accounts
 export const buildAccountTree = (accounts: ChartOfAccount[]): ChartOfAccountNode[] => {
   const accountMap = new Map<string, ChartOfAccountNode>();
   
-  // First pass: create all nodes
   accounts.forEach(account => {
     accountMap.set(account.id, {
       ...account,
@@ -135,7 +143,6 @@ export const buildAccountTree = (accounts: ChartOfAccount[]): ChartOfAccountNode
   
   const rootNodes: ChartOfAccountNode[] = [];
   
-  // Second pass: establish parent-child relationships
   accounts.forEach(account => {
     const node = accountMap.get(account.id)!;
     
