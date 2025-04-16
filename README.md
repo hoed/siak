@@ -138,6 +138,4 @@ Untuk kontribusi:
 ## 📄 Lisensi
 
 MIT License © [hoed](https://github.com/hoed)
-```
-
 ---
