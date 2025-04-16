@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { initializeTestUsers, directSignInAsAdmin } from '@/integrations/supabase/auth-admin';
+import { initializeTestUsers, directSignInAsAdmin, directSignInAsCustomAdmin } from '@/integrations/supabase/auth-admin';
 import { importChartOfAccounts } from '@/services/coaImportService';
 import { chartOfAccountsData } from '@/data/chartOfAccountsData';
 
@@ -82,6 +82,11 @@ const Login: React.FC = () => {
     setPassword('admin123');
   };
   
+  const fillCustomAdminCredentials = () => {
+    setEmail('hoedhud@gmail.com');
+    setPassword('hoedhud12345');
+  };
+  
   // Create test users for development
   const handleCreateTestUsers = async () => {
     setCreatingTestUsers(true);
@@ -111,6 +116,22 @@ const Login: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Direct admin login error:', error);
+      toast.error(`Login langsung gagal: ${error.message || 'Terjadi kesalahan'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Direct custom admin login (development only)
+  const handleDirectCustomAdminLogin = async () => {
+    setLoading(true);
+    try {
+      const result = await directSignInAsCustomAdmin();
+      if (result.success) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Direct custom admin login error:', error);
       toast.error(`Login langsung gagal: ${error.message || 'Terjadi kesalahan'}`);
     } finally {
       setLoading(false);
@@ -209,6 +230,13 @@ const Login: React.FC = () => {
                     <button 
                       type="button" 
                       className="text-primary hover:underline text-left" 
+                      onClick={fillCustomAdminCredentials}
+                    >
+                      Isi kredensial custom admin (hoedhud@gmail.com)
+                    </button>
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline text-left" 
                       onClick={handleCreateTestUsers}
                       disabled={creatingTestUsers}
                     >
@@ -221,6 +249,22 @@ const Login: React.FC = () => {
                       disabled={loading}
                     >
                       Login langsung sebagai admin
+                    </button>
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline text-left" 
+                      onClick={handleDirectCustomAdminLogin}
+                      disabled={loading}
+                    >
+                      Login langsung sebagai custom admin
+                    </button>
+                    <button 
+                      type="button" 
+                      className="text-primary hover:underline text-left" 
+                      onClick={handleImportCoA}
+                      disabled={importingCoA}
+                    >
+                      {importingCoA ? 'Mengimpor Chart of Accounts...' : 'Import Chart of Accounts'}
                     </button>
                   </div>
                 </CardContent>

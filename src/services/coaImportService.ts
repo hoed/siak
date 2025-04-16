@@ -86,13 +86,20 @@ export const importChartOfAccounts = async (coaData: CoaImportItem[]): Promise<b
       if (item.Subcategory && item.Subcategory !== '') {
         // Find the parent account ID by name
         const parentAccount = existingAccounts?.find(acc => acc.name === item.Subcategory) || 
-          Array.from(accountCodeMap.entries()).find(([_, id]) => {
-            const foundAccount = coaData.find(coa => coa["Account Name"] === item.Subcategory);
-            return foundAccount && foundAccount["Account Code"];
-          });
+          coaData.find(coa => coa["Account Name"] === item.Subcategory);
           
         if (parentAccount) {
-          const parentId = typeof parentAccount === 'object' ? parentAccount.id : accountCodeMap.get(parentAccount[0]);
+          let parentId: string | undefined;
+          
+          // Check if parentAccount is from existingAccounts or coaData
+          if ('id' in parentAccount) {
+            // It's from existingAccounts
+            parentId = parentAccount.id;
+          } else {
+            // It's from coaData, get the ID from the map
+            parentId = accountCodeMap.get(parentAccount["Account Code"]);
+          }
+          
           const currentAccountId = accountCodeMap.get(item["Account Code"]);
           
           if (parentId && currentAccountId) {

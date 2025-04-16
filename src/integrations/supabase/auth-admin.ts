@@ -184,7 +184,91 @@ export const createTestUsers = async () => {
       console.log('Manager user already exists');
     }
 
-    // Note: Removed the RPC calls that were causing errors
+    // Create custom admin user
+    const { data: existingCustomAdminData, error: existingCustomAdminError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', 'hoedhud@gmail.com')
+      .maybeSingle();
+
+    if (existingCustomAdminError) {
+      console.error('Error checking for existing custom admin:', existingCustomAdminError);
+    }
+
+    // If custom admin does not exist, create it
+    if (!existingCustomAdminData) {
+      console.log('Creating custom admin user...');
+      
+      const { data: customAdminAuthData, error: customAdminAuthError } = await supabase.auth.admin.createUser({
+        email: 'hoedhud@gmail.com',
+        password: 'hoedhud12345',
+        user_metadata: {
+          name: 'Custom Admin',
+          role: 'admin'
+        },
+        email_confirm: true
+      });
+      
+      if (customAdminAuthError) {
+        console.error('Custom admin auth creation error:', customAdminAuthError);
+        // Fallback to regular signup
+        const { data: fallbackCustomAdminData, error: fallbackError } = await supabase.auth.signUp({
+          email: 'hoedhud@gmail.com',
+          password: 'hoedhud12345',
+          options: {
+            data: {
+              name: 'Custom Admin',
+              role: 'admin'
+            }
+          }
+        });
+        
+        if (fallbackError) {
+          throw fallbackError;
+        }
+        
+        // If fallback worked, use the created user
+        if (fallbackCustomAdminData?.user) {
+          console.log('Custom admin created via fallback method:', fallbackCustomAdminData);
+          
+          // Manually insert custom admin profile
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: fallbackCustomAdminData.user.id,
+              name: 'Custom Admin',
+              email: 'hoedhud@gmail.com',
+              role: 'admin'
+            });
+            
+          if (profileError) {
+            console.error('Error creating custom admin profile:', profileError);
+          } else {
+            console.log('Custom admin profile created successfully');
+          }
+        }
+      } else if (customAdminAuthData?.user) {
+        console.log('Custom admin auth user created:', customAdminAuthData);
+        
+        // Manually insert custom admin profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: customAdminAuthData.user.id,
+            name: 'Custom Admin',
+            email: 'hoedhud@gmail.com',
+            role: 'admin'
+          });
+          
+        if (profileError) {
+          console.error('Error creating custom admin profile:', profileError);
+        } else {
+          console.log('Custom admin profile created successfully');
+        }
+      }
+    } else {
+      console.log('Custom admin user already exists');
+    }
 
     return { success: true };
   } catch (error) {
@@ -224,6 +308,29 @@ export const directSignInAsAdmin = async () => {
     return { success: true, data };
   } catch (error) {
     console.error('Exception during direct admin signin:', error);
+    return { success: false, error };
+  }
+};
+
+// Add a utility to directly sign in as custom admin
+export const directSignInAsCustomAdmin = async () => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: 'hoedhud@gmail.com',
+      password: 'hoedhud12345'
+    });
+    
+    if (error) {
+      console.error('Direct custom admin signin error:', error);
+      toast.error(`Login gagal: ${error.message}`);
+      return { success: false, error };
+    }
+    
+    console.log('Direct custom admin signin successful:', data);
+    toast.success('Login berhasil sebagai custom admin!');
+    return { success: true, data };
+  } catch (error) {
+    console.error('Exception during direct custom admin signin:', error);
     return { success: false, error };
   }
 };
