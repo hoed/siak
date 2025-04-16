@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,143 +7,124 @@ import DashboardStats from '@/components/dashboard/DashboardStats';
 import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
-import { Database } from '@/integrations/supabase/types';
+import { ExtendedDatabase } from '@/integrations/supabase/chart-of-accounts-types';
 
 // Use Supabase-generated types
-type TransactionRow = Database['public']['Tables']['transactions']['Row'];
-type CategoryRow = Database['public']['Tables']['categories']['Row'];
+type Transaction = ExtendedDatabase['public']['Tables']['transactions']['Row'];
 
 // Define FinancialSummary to match DashboardStatsProps
 interface FinancialSummary {
-  totalIncome: {
-    month: number;
-  };
-  totalExpense: {
-    month: number;
-  };
+  totalIncome: number;
+  totalExpense: number;
+  netIncome: number;
+  recentTransactions: Transaction[];
+  upcomingReceivables: any[];
   balance: number;
-  recentTransactions: TransactionRow[];
-  upcomingReceivables: any[]; // Adjust based on your schema (e.g., receivables type)
+  upcomingDebts: any[];
 }
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<any | null>(null);
+  const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [yearlyData, setYearlyData] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
-  const [calendarTransactions, setCalendarTransactions] = useState<TransactionRow[]>([]);
-  const [recentTransactionsData, setRecentTransactionsData] = useState<TransactionRow[]>([]);
-  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [calendarTransactions, setCalendarTransactions] = useState<Transaction[]>([]);
+  const [recentTransactionsData, setRecentTransactionsData] = useState<Transaction[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
+        // Log user to ensure auth is working
+        console.log('User:', user);
+
         // Fetch financial summary
-        const { data: incomeData } = await supabase
-        .from('transactions')
-        .select('amount, date')
-        .eq('type', 'income')
-        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-        .lte('date', new Date().toISOString());
+        const { data: incomeData, error: incomeError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('type', 'income');
+        if (incomeError) throw new Error('Failed to fetch income: ' + incomeError.message);
+        console.log('Income Data:', incomeData);
 
-        const { data: expenseData } = await supabase
-        .from('transactions')
-        .select('amount, date')
-        .eq('type', 'expense')
-        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-        .lte('date', new Date().toISOString());
+        const { data: expenseData, error: expenseError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('type', 'expense');
+        if (expenseError) throw new Error('Failed to fetch expenses: ' + expenseError.message);
+        console.log('Expense Data:', expenseData);
 
-        const totalIncome = incomeData?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
-        const totalExpense = expenseData?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
-
-        const { data: allIncomeData } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('type', 'income');
-        const { data: allExpenseData } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('type', 'expense');
+        const totalIncome = incomeData?.reduce((sum, t) => sum + t.amount, 0) || 0;
+        const totalExpense = expenseData?.reduce((sum, t) => sum + t.amount, 0) || 0;
         const netIncome = totalIncome - totalExpense;
 
-        // Fetch recent transactions (adjust limit as needed)
-        const { data: recentTxns } = await supabase
+        // Fetch recent transactions
+        const { data: recentTxns, error: recentTxnsError } = await supabase
           .from('transactions')
           .select('*')
           .order('date', { ascending: false })
           .limit(5);
+        if (recentTxnsError) throw new Error('Failed to fetch recent transactions: ' + recentTxnsError.message);
+        console.log('Recent Transactions:', recentTxns);
 
-        // Fetch upcoming receivables (example, adjust based on your schema)
-        const { data: receivables } = await supabase
+        // Fetch upcoming receivables
+        const { data: receivables, error: receivablesError } = await supabase
           .from('receivables')
           .select('*')
           .gte('due_date', new Date().toISOString().split('T')[0]);
+        if (receivablesError) throw new Error('Failed to fetch receivables: ' + receivablesError.message);
+        console.log('Receivables:', receivables);
 
         setSummary({
-          totalIncome: {
-            month: totalIncome,
-          },
-          totalExpense: {
-            month: totalExpense,
-          },
+          totalIncome,
+          totalExpense,
+          netIncome,
           recentTransactions: recentTxns || [],
           upcomingReceivables: receivables || [],
+          balance: 0, // Or fetch the actual balance if available
+          upcomingDebts: [], // Or fetch the actual debts if available
         });
 
-        // Fetch yearly data (convert year to string)
-        const { data: yearlyTxns } = await supabase
+        // Fetch yearly data
+        const { data: yearlyTxns, error: yearlyTxnsError } = await supabase
           .from('transactions')
           .select('date, amount, type')
           .gte('date', new Date(new Date().getFullYear() - 1, 0, 1).toISOString())
           .lte('date', new Date().toISOString());
+        if (yearlyTxnsError) throw new Error('Failed to fetch yearly transactions: ' + yearlyTxnsError.message);
+        console.log('Yearly Transactions:', yearlyTxns);
+
         const yearlySummary = yearlyTxns?.reduce((acc, txn) => {
           const year = new Date(txn.date).getFullYear().toString();
           if (!acc[year]) acc[year] = { year, income: 0, expense: 0 };
           acc[year][txn.type === 'income' ? 'income' : 'expense'] += txn.amount;
           return acc;
         }, {} as { [key: string]: { year: string; income: number; expense: number } });
-        setYearlyData(Object.values(yearlySummary));
-
-        // Fetch monthly data
-        const { data: monthlyTxns } = await supabase
-          .from('transactions')
-          .select('date, amount, type')
-          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth() - 11, 1).toISOString())
-          .lte('date', new Date().toISOString());
-        const monthlySummary = monthlyTxns?.reduce((acc, txn) => {
-          const month = new Date(txn.date).toLocaleString('default', { month: 'short' });
-          if (!acc[month]) acc[month] = { month, income: 0, expense: 0 };
-          acc[month][txn.type === 'income' ? 'income' : 'expense'] += txn.amount;
-          return acc;
-        }, {} as { [key: string]: { month: string; income: number; expense: number } });
-        setMonthlyData(Object.values(monthlySummary));
-
+        setYearlyData(Object.values(yearlySummary || {}));
+        console.log('Yearly Data:', Object.values(yearlySummary || {}));
 
         // Fetch transactions for calendar
-        const { data: calendarTxns } = await supabase
+        const { data: calendarTxns, error: calendarTxnsError } = await supabase
           .from('transactions')
           .select('*')
           .order('date', { ascending: false })
           .limit(30);
+        if (calendarTxnsError) throw new Error('Failed to fetch calendar transactions: ' + calendarTxnsError.message);
+        console.log('Calendar Transactions:', calendarTxns);
         setCalendarTransactions(calendarTxns || []);
 
         // Fetch recent transactions for display
-        const { data: recentData } = await supabase
+        const { data: recentData, error: recentDataError } = await supabase
           .from('transactions')
           .select('*')
           .order('date', { ascending: false })
           .limit(5);
+        if (recentDataError) throw new Error('Failed to fetch recent transactions: ' + recentDataError.message);
+        console.log('Recent Transactions Data:', recentData);
         setRecentTransactionsData(recentData || []);
-
-        // Fetch categories
-        const { data: categoriesData } = await supabase
-          .from('categories')
-          .select('*');
-        setCategories(categoriesData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+      } catch (err: any) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err.message || 'Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
@@ -152,18 +133,24 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  const balance = useMemo(() => {
-    if (!summary) return 0;
-    const totalIncome = summary.totalIncome.month;
-    const totalExpense = summary.totalExpense.month;
-    return totalIncome - totalExpense;
-  }, [summary]);
+  // Log state to debug rendering issues
+  console.log('Rendering Dashboard - Loading:', loading, 'Summary:', summary, 'Error:', error);
 
   if (loading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="p-4 bg-red-100 text-red-700 rounded">
+          Error: {error}
         </div>
       </MainLayout>
     );
@@ -183,33 +170,28 @@ const Dashboard: React.FC = () => {
     <MainLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        {summary && (
+        {summary ? (
           <DashboardStats summary={summary} />
-          )}
+        ) : (
+          <div>No summary data available.</div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <IncomeExpenseChart monthlyData={monthlyData} yearlyData={yearlyData} />
-          <DashboardCalendar
-            transactions={calendarTransactions.map(transaction => ({
-              ...transaction,
-              categoryId: transaction.category_id,
-              accountId: transaction.account_id,
-              createdBy: transaction.created_by,
-              createdAt: transaction.created_at,
-              updatedAt: transaction.updated_at,
-            }))}
-          />
+          {yearlyData.length > 0 ? (
+            <IncomeExpenseChart yearlyData={yearlyData} />
+          ) : (
+            <div>No yearly data available.</div>
+          )}
+          {calendarTransactions.length > 0 ? (
+            <DashboardCalendar transactions={calendarTransactions} />
+          ) : (
+            <div>No calendar transactions available.</div>
+          )}
         </div>
-        <RecentTransactions
-          transactions={recentTransactionsData.map(transaction => ({
-            ...transaction,
-            categoryId: transaction.category_id,
-            accountId: transaction.account_id,
-            createdBy: transaction.created_by,
-            createdAt: transaction.created_at,
-            updatedAt: transaction.updated_at,
-          }))}
-          categories={categories}
-        />
+        {recentTransactionsData.length > 0 ? (
+          <RecentTransactions transactions={recentTransactionsData} />
+        ) : (
+          <div>No recent transactions available.</div>
+        )}
       </div>
     </MainLayout>
   );
