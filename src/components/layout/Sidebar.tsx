@@ -1,169 +1,41 @@
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  PieChart, 
-  ArrowLeftRight, 
-  Wallet, 
-  ArrowDownCircle, 
-  ArrowUpCircle, 
-  Users, 
-  FileText, 
-  Settings,
-  CreditCard,
-  CalendarClock,
-  LogOut,
-  BookOpen
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, List, LogOut } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
-  const location = useLocation();
-  const { user, logout } = useAuth();
-  
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
-
-  const menuItems = [
-    { 
-      icon: <LayoutDashboard size={20} />, 
-      name: 'Dashboard', 
-      path: '/dashboard',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <BookOpen size={20} />, 
-      name: 'Bagan Akun', 
-      path: '/chart-of-accounts',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <ArrowUpCircle size={20} />, 
-      name: 'Pendapatan', 
-      path: '/income',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <ArrowDownCircle size={20} />, 
-      name: 'Pengeluaran', 
-      path: '/expenses',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <ArrowLeftRight size={20} />, 
-      name: 'Transaksi', 
-      path: '/transactions',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <CalendarClock size={20} />, 
-      name: 'Hutang', 
-      path: '/debts',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <CalendarClock size={20} />, 
-      name: 'Piutang', 
-      path: '/receivables',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <CreditCard size={20} />, 
-      name: 'Akun Bank', 
-      path: '/accounts',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <FileText size={20} />, 
-      name: 'Laporan', 
-      path: '/reports',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <PieChart size={20} />, 
-      name: 'Kategori', 
-      path: '/categories',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <Users size={20} />, 
-      name: 'Pengguna', 
-      path: '/users',
-      roles: ['admin']
-    },
-    { 
-      icon: <Settings size={20} />, 
-      name: 'Pengaturan', 
-      path: '/settings',
-      roles: ['admin', 'manager']
-    },
-  ];
-
-  // Filter menu items based on user role
-  const filteredMenuItems = menuItems.filter(item => 
-    user && item.roles.includes(user.role)
-  );
-
   return (
-    <div className="h-screen bg-sidebar text-sidebar-foreground w-64 flex flex-col border-r border-sidebar-border">
-      {/* Logo and app name */}
-      <div className="p-6 flex items-center justify-center">
-        <Wallet className="mr-2 text-primary" size={28} />
-        <h1 className="text-xl font-bold">SisKeu</h1>
-      </div>
-
-      {/* User profile area */}
-      <div className="px-6 py-4 border-t border-b border-sidebar-border">
-        <div className="flex items-center">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={user?.profileImage || ""} alt={user?.name || ""} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {user?.name?.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="ml-3">
-            <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-sidebar-foreground/70 capitalize">
-              {user?.role === 'admin' ? 'Administrator' : 'Manajer'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation menu */}
-      <nav className="flex-1 overflow-y-auto py-6">
-        <ul className="space-y-1 px-3">
-          {filteredMenuItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive(item.path)
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {item.name}
-              </Link>
-            </li>
-          ))}
+    <div className="w-64 h-screen bg-gray-800 text-white flex flex-col">
+      <div className="p-4 text-2xl font-bold">My App</div>
+      <nav className="flex-1">
+        <ul className="space-y-2 p-4">
+          <li>
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                isActive ? 'flex items-center p-2 bg-gray-700 rounded' : 'flex items-center p-2 hover:bg-gray-700 rounded'
+              }
+            >
+              <LayoutDashboard className="mr-2 h-5 w-5" />
+              Dashboard
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/chart-of-accounts"
+              className={({ isActive }) =>
+                isActive ? 'flex items-center p-2 bg-gray-700 rounded' : 'flex items-center p-2 hover:bg-gray-700 rounded'
+              }
+            >
+              <List className="mr-2 h-5 w-5" />
+              Chart of Accounts
+            </NavLink>
+          </li>
         </ul>
       </nav>
-
-      {/* Logout button */}
-      <div className="p-4 border-t border-sidebar-border">
-        <button
-          onClick={logout}
-          className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent/50 transition-colors"
-        >
-          <LogOut size={20} className="mr-3" />
-          Keluar
+      <div className="p-4">
+        <button className="flex items-center p-2 hover:bg-gray-700 rounded w-full">
+          <LogOut className="mr-2 h-5 w-5" />
+          Logout
         </button>
       </div>
     </div>

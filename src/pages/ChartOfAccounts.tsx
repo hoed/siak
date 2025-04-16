@@ -20,17 +20,13 @@ import {
   PlusCircle, Edit, Trash2, ChevronRight, ChevronDown 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
+import { ExtendedDatabase } from '@/integrations/supabase/chart-of-accounts-types';
 
-type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
-type ChartOfAccount = Database['public']['Tables']['chart_of_accounts']['Row'];
+type ChartOfAccount = ExtendedDatabase['public']['Tables']['chart_of_accounts']['Row'];
 
 interface ChartOfAccountNode extends ChartOfAccount {
-  id: string;
-  code: string;
   children?: ChartOfAccountNode[];
   level: number;
-  is_active: boolean;
 }
 
 const ChartOfAccounts: React.FC = () => {
@@ -67,7 +63,7 @@ const ChartOfAccounts: React.FC = () => {
     const tree: ChartOfAccountNode[] = [];
 
     accounts.forEach(account => {
-      map[account.id] = { ...account, children: [], level: 0, is_active: account.is_active };
+      map[account.id] = { ...account, children: [], level: 0 };
     });
 
     accounts.forEach(account => {
@@ -96,7 +92,7 @@ const ChartOfAccounts: React.FC = () => {
     mutationFn: async (data: Omit<ChartOfAccount, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
       const { error } = await supabase
         .from('chart_of_accounts')
-        .insert([data as any]);
+        .insert([data]);
       if (error) throw new Error(error.message || 'Failed to create account');
     },
     onSuccess: () => {
@@ -246,7 +242,7 @@ const ChartOfAccounts: React.FC = () => {
           <TableCell>{account.name}</TableCell>
           <TableCell>{account.type}</TableCell>
           <TableCell>{account.description || '-'}</TableCell>
-          <TableCell>{account.is_active === true ? 'Yes' : 'No'}</TableCell>
+          <TableCell>{account.is_active ? 'Yes' : 'No'}</TableCell>
           <TableCell>
             <div className="flex space-x-2">
               <Button

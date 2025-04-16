@@ -19,8 +19,6 @@ interface FinancialSummary {
   netIncome: number;
   recentTransactions: Transaction[];
   upcomingReceivables: any[];
-  balance: number;
-  upcomingDebts: any[];
 }
 
 const Dashboard: React.FC = () => {
@@ -36,10 +34,8 @@ const Dashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        // Log user to ensure auth is working
         console.log('User:', user);
 
-        // Fetch financial summary
         const { data: incomeData, error: incomeError } = await supabase
           .from('transactions')
           .select('amount')
@@ -58,7 +54,6 @@ const Dashboard: React.FC = () => {
         const totalExpense = expenseData?.reduce((sum, t) => sum + t.amount, 0) || 0;
         const netIncome = totalIncome - totalExpense;
 
-        // Fetch recent transactions
         const { data: recentTxns, error: recentTxnsError } = await supabase
           .from('transactions')
           .select('*')
@@ -67,7 +62,6 @@ const Dashboard: React.FC = () => {
         if (recentTxnsError) throw new Error('Failed to fetch recent transactions: ' + recentTxnsError.message);
         console.log('Recent Transactions:', recentTxns);
 
-        // Fetch upcoming receivables
         const { data: receivables, error: receivablesError } = await supabase
           .from('receivables')
           .select('*')
@@ -81,11 +75,8 @@ const Dashboard: React.FC = () => {
           netIncome,
           recentTransactions: recentTxns || [],
           upcomingReceivables: receivables || [],
-          balance: 0, // Or fetch the actual balance if available
-          upcomingDebts: [], // Or fetch the actual debts if available
         });
 
-        // Fetch yearly data
         const { data: yearlyTxns, error: yearlyTxnsError } = await supabase
           .from('transactions')
           .select('date, amount, type')
@@ -103,7 +94,6 @@ const Dashboard: React.FC = () => {
         setYearlyData(Object.values(yearlySummary || {}));
         console.log('Yearly Data:', Object.values(yearlySummary || {}));
 
-        // Fetch transactions for calendar
         const { data: calendarTxns, error: calendarTxnsError } = await supabase
           .from('transactions')
           .select('*')
@@ -113,7 +103,6 @@ const Dashboard: React.FC = () => {
         console.log('Calendar Transactions:', calendarTxns);
         setCalendarTransactions(calendarTxns || []);
 
-        // Fetch recent transactions for display
         const { data: recentData, error: recentDataError } = await supabase
           .from('transactions')
           .select('*')
@@ -133,7 +122,6 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  // Log state to debug rendering issues
   console.log('Rendering Dashboard - Loading:', loading, 'Summary:', summary, 'Error:', error);
 
   if (loading) {
