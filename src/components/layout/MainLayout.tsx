@@ -1,12 +1,18 @@
 import React from 'react';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
-const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
-    <div className="flex">
+    <div className="flex h-screen bg-background">
       <Sidebar />
-      <div className="flex-1 p-6 bg-gray-100 min-h-screen">
-        {children}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   );
