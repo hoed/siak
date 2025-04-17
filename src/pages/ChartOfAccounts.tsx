@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -25,7 +24,6 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle,
-
   DialogTrigger
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -77,16 +75,13 @@ const ChartOfAccounts: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch chart of accounts
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['chartOfAccounts'],
     queryFn: getChartOfAccounts
   });
 
-  // Account tree for hierarchical display
   const accountTree = React.useMemo(() => buildAccountTree(accounts), [accounts]);
 
-  // Create account mutation
   const createAccountMutation = useMutation({
     mutationFn: createChartOfAccount,
     onSuccess: () => {
@@ -96,7 +91,6 @@ const ChartOfAccounts: React.FC = () => {
     }
   });
 
-  // Update account mutation
   const updateAccountMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ChartOfAccount> }) => 
       updateChartOfAccount(id, data),
@@ -107,7 +101,6 @@ const ChartOfAccounts: React.FC = () => {
     }
   });
 
-  // Delete account mutation
   const deleteAccountMutation = useMutation({
     mutationFn: deleteChartOfAccount,
     onSuccess: (success) => {
@@ -118,7 +111,6 @@ const ChartOfAccounts: React.FC = () => {
     }
   });
 
-  // Reset form
   const resetForm = () => {
     setAccountForm({
       code: '',
@@ -129,7 +121,6 @@ const ChartOfAccounts: React.FC = () => {
     });
   };
 
-  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -148,7 +139,6 @@ const ChartOfAccounts: React.FC = () => {
     }
   };
 
-  // Initialize edit form
   const handleEdit = (account: ChartOfAccount) => {
     setEditingAccount(account);
     setAccountForm({
@@ -161,20 +151,17 @@ const ChartOfAccounts: React.FC = () => {
     setIsAddAccountOpen(true);
   };
 
-  // Handle delete confirmation
   const handleDeleteClick = (id: string) => {
     setDeleteId(id);
     setIsDeleteConfirmOpen(true);
   };
 
-  // Handle delete confirmation
   const confirmDelete = () => {
     if (deleteId) {
       deleteAccountMutation.mutate(deleteId);
     }
   };
 
-  // Toggle expanded account
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedAccounts);
     if (newExpanded.has(id)) {
@@ -185,7 +172,6 @@ const ChartOfAccounts: React.FC = () => {
     setExpandedAccounts(newExpanded);
   };
 
-  // Get account type label in Indonesian
   const getAccountTypeLabel = (type: AccountType): string => {
     const types = {
       asset: 'Aset',
@@ -197,7 +183,6 @@ const ChartOfAccounts: React.FC = () => {
     return types[type];
   };
 
-  // Render account rows recursively
   const renderAccountRows = (accounts: ChartOfAccountNode[], parentExpanded = true) => {
     return accounts.flatMap(account => {
       const hasChildren = account.children && account.children.length > 0;
@@ -206,7 +191,7 @@ const ChartOfAccounts: React.FC = () => {
       
       if (!isVisible) return [];
       
-      const indentation = account.level * 20; // 20px per level
+      const indentation = account.level * 20;
       
       const rows = [
         <TableRow key={account.id}>
@@ -254,7 +239,6 @@ const ChartOfAccounts: React.FC = () => {
         </TableRow>
       ];
       
-      // Add children if expanded
       if (hasChildren && isExpanded) {
         rows.push(...renderAccountRows(account.children!, isExpanded));
       }
@@ -282,7 +266,6 @@ const ChartOfAccounts: React.FC = () => {
         </Button>
       </div>
 
-      {/* Chart of Accounts Table */}
       <div className="bg-card rounded-md border shadow-sm">
         <div className="p-4">
           <Table>
@@ -316,7 +299,6 @@ const ChartOfAccounts: React.FC = () => {
         </div>
       </div>
 
-      {/* Add/Edit Account Sheet */}
       <Sheet open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
         <SheetContent side="right" className="sm:max-w-md">
           <SheetHeader>
@@ -371,7 +353,7 @@ const ChartOfAccounts: React.FC = () => {
                   <SelectValue placeholder="Pilih akun induk (opsional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">-- Tidak Ada --</SelectItem>
+                  <SelectItem value="none">-- Tidak Ada --</SelectItem>
                   {accounts.map((account) => (
                     <SelectItem 
                       key={account.id} 
@@ -411,7 +393,6 @@ const ChartOfAccounts: React.FC = () => {
         </SheetContent>
       </Sheet>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>

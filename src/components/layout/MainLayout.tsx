@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useIsMobile } from '@/hooks/use-mobile';

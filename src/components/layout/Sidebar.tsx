@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -28,6 +28,11 @@ const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(!isMobile);
+  
+  // Update sidebar state when mobile status changes
+  useEffect(() => {
+    setIsOpen(!isMobile);
+  }, [isMobile]);
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -125,6 +130,12 @@ const Sidebar: React.FC = () => {
     isMobile && !isOpen ? "w-0 border-none" : ""
   );
 
+  // Create a backdrop for mobile when sidebar is open
+  const backdropClasses = cn(
+    "fixed inset-0 bg-black/50 z-30 md:hidden transition-opacity",
+    isOpen && isMobile ? "opacity-100" : "opacity-0 pointer-events-none"
+  );
+
   const menuToggleButton = (
     <button 
       onClick={toggleSidebar}
@@ -139,7 +150,14 @@ const Sidebar: React.FC = () => {
 
   return (
     <>
+      {/* Backdrop for mobile */}
+      <div 
+        className={backdropClasses} 
+        onClick={() => isMobile && setIsOpen(false)}
+      />
+      
       {menuToggleButton}
+      
       <div className={sidebarClasses}>
         {/* Logo and app name */}
         <div className={cn(
@@ -185,6 +203,7 @@ const Sidebar: React.FC = () => {
                     !isOpen && "justify-center px-2"
                   )}
                   title={!isOpen ? item.name : undefined}
+                  onClick={() => isMobile && setIsOpen(false)}
                 >
                   <span className={cn(!isOpen && "mx-0")}>{item.icon}</span>
                   {isOpen && <span className="ml-3">{item.name}</span>}
