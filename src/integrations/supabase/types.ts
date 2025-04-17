@@ -11,82 +11,27 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
-          account_number: string | null
+          id: string
+          name: string
           balance: number
           created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          name: string
           updated_at: string
         }
         Insert: {
-          account_number?: string | null
-          balance?: number
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
           id?: string
           name: string
+          balance?: number
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          account_number?: string | null
+          id?: string
+          name?: string
           balance?: number
           created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          name?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "accounts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      categories: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          name: string
-          type: Database["public"]["Enums"]["category_type"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          name: string
-          type: Database["public"]["Enums"]["category_type"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-          type?: Database["public"]["Enums"]["category_type"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "categories_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       customers: {
         Row: {
@@ -95,8 +40,9 @@ export type Database = {
           email: string
           phone: string
           address: string | null
-          status: "active" | "inactive"
+          status: string
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -104,8 +50,9 @@ export type Database = {
           email: string
           phone: string
           address?: string | null
-          status?: "active" | "inactive"
+          status?: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -113,8 +60,9 @@ export type Database = {
           email?: string
           phone?: string
           address?: string | null
-          status?: "active" | "inactive"
+          status?: string
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -126,8 +74,10 @@ export type Database = {
           description: string
           due_date: string
           id: string
+          invoice_number: string
           is_paid: boolean
           paid_date: string | null
+          supplier_id: string | null
           updated_at: string
         }
         Insert: {
@@ -137,8 +87,10 @@ export type Database = {
           description: string
           due_date: string
           id?: string
+          invoice_number?: string
           is_paid?: boolean
           paid_date?: string | null
+          supplier_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -148,8 +100,10 @@ export type Database = {
           description?: string
           due_date?: string
           id?: string
+          invoice_number?: string
           is_paid?: boolean
           paid_date?: string | null
+          supplier_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -160,46 +114,57 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "debts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          }
         ]
       }
       profiles: {
         Row: {
-          created_at: string
-          email: string
           id: string
-          name: string
-          profile_image: string | null
-          role: string
+          email: string
+          role: Database["public"]["Enums"]["user_role"]
+          created_at: string
           updated_at: string
         }
         Insert: {
-          created_at?: string
+          id?: string
           email: string
-          id: string
-          name: string
-          profile_image?: string | null
-          role: string
+          role?: Database["public"]["Enums"]["user_role"]
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          created_at?: string
-          email?: string
           id?: string
-          name?: string
-          profile_image?: string | null
-          role?: string
+          email?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       receivables: {
         Row: {
           amount: number
           created_at: string
           created_by: string | null
+          customer_id: string | null
           description: string
           due_date: string
           id: string
+          invoice_number: string
           is_received: boolean
           received_date: string | null
           updated_at: string
@@ -208,9 +173,11 @@ export type Database = {
           amount: number
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           description: string
           due_date: string
           id?: string
+          invoice_number?: string
           is_received?: boolean
           received_date?: string | null
           updated_at?: string
@@ -219,9 +186,11 @@ export type Database = {
           amount?: number
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           description?: string
           due_date?: string
           id?: string
+          invoice_number?: string
           is_received?: boolean
           received_date?: string | null
           updated_at?: string
@@ -234,6 +203,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "receivables_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
         ]
       }
       suppliers: {
@@ -243,8 +219,9 @@ export type Database = {
           email: string
           phone: string
           address: string | null
-          status: "active" | "inactive"
+          status: string
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -252,8 +229,9 @@ export type Database = {
           email: string
           phone: string
           address?: string | null
-          status?: "active" | "inactive"
+          status?: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -261,8 +239,9 @@ export type Database = {
           email?: string
           phone?: string
           address?: string | null
-          status?: "active" | "inactive"
+          status?: string
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -273,9 +252,11 @@ export type Database = {
           category_id: string | null
           created_at: string
           created_by: string | null
+          customer_id: string | null
           date: string
           description: string | null
           id: string
+          supplier_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
         }
@@ -285,9 +266,11 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           date: string
           description?: string | null
           id?: string
+          supplier_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
@@ -297,9 +280,11 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           date?: string
           description?: string | null
           id?: string
+          supplier_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
         }
@@ -325,6 +310,20 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          }
         ]
       }
     }
@@ -340,6 +339,7 @@ export type Database = {
     Enums: {
       category_type: "income" | "expense"
       transaction_type: "income" | "expense"
+      user_role: "admin" | "manager" | "accountant" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -457,6 +457,7 @@ export const Constants = {
     Enums: {
       category_type: ["income", "expense"],
       transaction_type: ["income", "expense"],
+      user_role: ["admin", "manager", "accountant", "user"],
     },
   },
 } as const
