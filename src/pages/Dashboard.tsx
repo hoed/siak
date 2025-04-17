@@ -1,197 +1,101 @@
+
 import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import { useAuth } from '@/contexts/auth';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
-import DashboardStats from '@/components/dashboard/DashboardStats';
-import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar';
+import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
-import { ExtendedDatabase } from '@/integrations/supabase/chart-of-accounts-types';
-
-// Use Supabase-generated types
-type Transaction = ExtendedDatabase['public']['Tables']['transactions']['Row'];
-
-// Define FinancialSummary to match DashboardStatsProps
-interface FinancialSummary {
-  totalIncome: number;
-  totalExpense: number;
-  netIncome: number;
-  recentTransactions: Transaction[];
-  upcomingReceivables: any[];
-  balance: number;
-  upcomingDebts: any[];
-}
+import { getAllData } from '@/data/mockData';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<FinancialSummary | null>(null);
-  const [yearlyData, setYearlyData] = useState<any[]>([]);
-  const [calendarTransactions, setCalendarTransactions] = useState<Transaction[]>([]);
-  const [recentTransactionsData, setRecentTransactionsData] = useState<Transaction[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState(getAllData());
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        // Log user to ensure auth is working
-        console.log('User:', user);
-
-        // Fetch financial summary
-        const { data: incomeData, error: incomeError } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('type', 'income');
-        if (incomeError) throw new Error('Failed to fetch income: ' + incomeError.message);
-        console.log('Income Data:', incomeData);
-
-        const { data: expenseData, error: expenseError } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('type', 'expense');
-        if (expenseError) throw new Error('Failed to fetch expenses: ' + expenseError.message);
-        console.log('Expense Data:', expenseData);
-
-        const totalIncome = incomeData?.reduce((sum, t) => sum + t.amount, 0) || 0;
-        const totalExpense = expenseData?.reduce((sum, t) => sum + t.amount, 0) || 0;
-        const netIncome = totalIncome - totalExpense;
-
-        // Fetch recent transactions
-        const { data: recentTxns, error: recentTxnsError } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(5);
-        if (recentTxnsError) throw new Error('Failed to fetch recent transactions: ' + recentTxnsError.message);
-        console.log('Recent Transactions:', recentTxns);
-
-        // Fetch upcoming receivables
-        const { data: receivables, error: receivablesError } = await supabase
-          .from('receivables')
-          .select('*')
-          .gte('due_date', new Date().toISOString().split('T')[0]);
-        if (receivablesError) throw new Error('Failed to fetch receivables: ' + receivablesError.message);
-        console.log('Receivables:', receivables);
-
-        setSummary({
-          totalIncome,
-          totalExpense,
-          netIncome,
-          recentTransactions: recentTxns || [],
-          upcomingReceivables: receivables || [],
-          balance: 0, // Or fetch the actual balance if available
-          upcomingDebts: [], // Or fetch the actual debts if available
-        });
-
-        // Fetch yearly data
-        const { data: yearlyTxns, error: yearlyTxnsError } = await supabase
-          .from('transactions')
-          .select('date, amount, type')
-          .gte('date', new Date(new Date().getFullYear() - 1, 0, 1).toISOString())
-          .lte('date', new Date().toISOString());
-        if (yearlyTxnsError) throw new Error('Failed to fetch yearly transactions: ' + yearlyTxnsError.message);
-        console.log('Yearly Transactions:', yearlyTxns);
-
-        const yearlySummary = yearlyTxns?.reduce((acc, txn) => {
-          const year = new Date(txn.date).getFullYear().toString();
-          if (!acc[year]) acc[year] = { year, income: 0, expense: 0 };
-          acc[year][txn.type === 'income' ? 'income' : 'expense'] += txn.amount;
-          return acc;
-        }, {} as { [key: string]: { year: string; income: number; expense: number } });
-        setYearlyData(Object.values(yearlySummary || {}));
-        console.log('Yearly Data:', Object.values(yearlySummary || {}));
-
-        // Fetch transactions for calendar
-        const { data: calendarTxns, error: calendarTxnsError } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(30);
-        if (calendarTxnsError) throw new Error('Failed to fetch calendar transactions: ' + calendarTxnsError.message);
-        console.log('Calendar Transactions:', calendarTxns);
-        setCalendarTransactions(calendarTxns || []);
-
-        // Fetch recent transactions for display
-        const { data: recentData, error: recentDataError } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(5);
-        if (recentDataError) throw new Error('Failed to fetch recent transactions: ' + recentDataError.message);
-        console.log('Recent Transactions Data:', recentData);
-        setRecentTransactionsData(recentData || []);
-      } catch (err: any) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err.message || 'Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
+    // In a real app, this would fetch data from an API
+    setData(getAllData());
   }, []);
-
-  // Log state to debug rendering issues
-  console.log('Rendering Dashboard - Loading:', loading, 'Summary:', summary, 'Error:', error);
-
-  if (loading) {
-    return (
-      <MainLayout>
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="p-4 bg-red-100 text-red-700 rounded">
-          Error: {error}
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (!user) {
-    return (
-      <MainLayout>
-        <div className="p-4 bg-red-100 text-red-700 rounded">
-          Please log in to view the dashboard.
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="pb-4">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        {summary ? (
-          <DashboardStats summary={summary} />
-        ) : (
-          <div>No summary data available.</div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {yearlyData.length > 0 ? (
-            <IncomeExpenseChart yearlyData={yearlyData} />
-          ) : (
-            <div>No yearly data available.</div>
-          )}
-          {calendarTransactions.length > 0 ? (
-            <DashboardCalendar transactions={calendarTransactions} />
-          ) : (
-            <div>No calendar transactions available.</div>
-          )}
+        <p className="text-muted-foreground">
+          Selamat datang kembali, {user?.name}! Berikut ringkasan keuangan Anda.
+        </p>
+      </div>
+
+      {/* Main stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2">
+          <IncomeExpenseChart
+            monthlyData={data.monthlyChartData}
+            yearlyData={data.yearlyChartData}
+          />
         </div>
-        {recentTransactionsData.length > 0 ? (
-          <RecentTransactions transactions={recentTransactionsData} />
-        ) : (
-          <div>No recent transactions available.</div>
-        )}
+        <div>
+          <DashboardCalendar transactions={data.transactions} />
+        </div>
+      </div>
+
+      {/* Recent transactions */}
+      <div className="mb-6">
+        <RecentTransactions
+          transactions={data.transactions}
+          categories={data.categories}
+        />
+      </div>
+
+      {/* Additional cards for account summaries or pending items */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="dashboard-card">
+          <div className="dashboard-card-header">
+            <h3 className="dashboard-card-title">Pembayaran Akan Datang</h3>
+          </div>
+          <div className="dashboard-card-body space-y-3">
+            {data.financialSummary.upcomingDebts.map((debt) => (
+              <div key={debt.id} className="flex justify-between items-center pb-2 border-b">
+                <div>
+                  <p className="font-medium text-sm">{debt.description}</p>
+                  <p className="text-xs text-muted-foreground">Kepada {debt.personName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-finance-expense">Rp{debt.amount.toLocaleString('id-ID')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {debt.dueDate ? new Date(debt.dueDate).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {data.financialSummary.upcomingDebts.length === 0 && (
+              <p className="text-muted-foreground text-center py-3">Tidak ada pembayaran akan datang</p>
+            )}
+          </div>
+        </div>
+        <div className="dashboard-card">
+          <div className="dashboard-card-header">
+            <h3 className="dashboard-card-title">Penerimaan Akan Datang</h3>
+          </div>
+          <div className="dashboard-card-body space-y-3">
+            {data.financialSummary.upcomingReceivables.map((receivable) => (
+              <div key={receivable.id} className="flex justify-between items-center pb-2 border-b">
+                <div>
+                  <p className="font-medium text-sm">{receivable.description}</p>
+                  <p className="text-xs text-muted-foreground">Dari {receivable.personName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-finance-income">Rp{receivable.amount.toLocaleString('id-ID')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {receivable.dueDate ? new Date(receivable.dueDate).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {data.financialSummary.upcomingReceivables.length === 0 && (
+              <p className="text-muted-foreground text-center py-3">Tidak ada penerimaan akan datang</p>
+            )}
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

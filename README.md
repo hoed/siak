@@ -1,141 +1,73 @@
-# 📊 SIAK — Sistem Informasi Akuntansi Keuangan
+# Welcome to your Lovable project
 
-**SIAK** adalah aplikasi keuangan berbasis web yang dibangun menggunakan [Vite](https://vitejs.dev/), dan dapat langsung dideploy di [Vercel](https://vercel.com). Aplikasi ini dirancang untuk mengelola keuangan pribadi atau bisnis kecil, dengan fitur-fitur lengkap seperti pencatatan transaksi, laporan keuangan, dan pengelolaan akun.
+## Project info
 
-🔗 Live demo: [https://sikeu.vercel.app](https://sikeu.vercel.app)  
-🔗 GitHub: [https://github.com/hoed/siak](https://github.com/hoed/siak)
+**URL**: https://lovable.dev/projects/972a7ca4-9c64-4a25-a7b7-bf7c9564534b
 
----
+## How can I edit this code?
 
-## ✨ Fitur Utama
+There are several ways of editing your application.
 
-1. 📚 Chart of Account (CoA)
-2. 🔄 CRUD kategori pengeluaran dan pemasukan
-3. 💰 Manajemen transaksi pengeluaran dan pemasukan
-4. 📉 Pencatatan utang
-5. 📈 Pencatatan piutang
-6. 🏦 Manajemen akun rekening bank
-7. 🧮 Perhitungan otomatis pengeluaran dan pemasukan tiap rekening
-8. 👤 Manajemen data pengguna aplikasi
-9. 🛡️ Hak akses: Administrator dan Manajemen
-10. 📅 Filter laporan keuangan berdasarkan tanggal (harian, mingguan, bulanan)
-11. 🗂️ Filter laporan keuangan berdasarkan kategori
-12. 🔁 Pencatatan arus kas (cash flow)
-13. 🔑 Fitur ganti password
-14. 📆 Ringkasan pendapatan harian, bulanan, tahunan, dan total di dashboard
-15. 🧾 Ringkasan pengeluaran harian, bulanan, tahunan, dan total di dashboard
-16. 📅 Kalender di dashboard
-17. 📊 Grafik pengeluaran & pemasukan per bulan
-18. 📈 Grafik pengeluaran & pemasukan per tahun
-19. 🖼️ Pengguna bisa mengganti foto profil sendiri
-20. 👥 Multi-user login (Administrator & Manajemen)
+**Use Lovable**
 
----
+Simply visit the [Lovable Project](https://lovable.dev/projects/972a7ca4-9c64-4a25-a7b7-bf7c9564534b) and start prompting.
 
-## 🚀 Teknologi yang Digunakan
+Changes made via Lovable will be committed automatically to this repo.
 
-- **Frontend:** [Vite](https://vitejs.dev/)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **State Management:** LocalStorage
-- **Deployment:** [Vercel](https://vercel.com)
+**Use your preferred IDE**
 
----
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-## ⚙️ Cara Install dan Jalankan di Lokal
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### 1. Clone repositori
+Follow these steps:
 
-```bash
-git clone https://github.com/hoed/siak.git
-cd siak
-```
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-### 2. Install dependencies
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-Pastikan kamu sudah menginstall Node.js terlebih dahulu.
+# Step 3: Install the necessary dependencies.
+npm i
 
-```bash
-npm install
-```
-
-### 3. Jalankan aplikasi secara lokal
-
-```bash
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-Akses aplikasinya di: [http://localhost:5173](http://localhost:5173)
+**Edit a file directly in GitHub**
 
----
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-## 🧾 Struktur Folder (Ringkasan)
+**Use GitHub Codespaces**
 
-```
-siak/
-├── public/             # Asset publik
-├── src/
-│   ├── components/     # Komponen UI
-│   ├── pages/          # Halaman aplikasi
-│   ├── utils/          # Fungsi utilitas
-│   ├── assets/         # Ikon & gambar
-│   └── App.jsx         # Root App
-├── index.html
-└── vite.config.js
-```
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
----
+## What technologies are used for this project?
 
-## 🌐 Deployment
+This project is built with:
 
-SIAK didesain agar bisa langsung dideploy ke [Vercel](https://vercel.com):
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-1. Login ke Vercel
-2. Connect repo GitHub: `hoed/siak`
-3. Klik **Deploy**
-4. Aplikasi siap online di [https://sikeu.vercel.app](https://sikeu.vercel.app)
+## How can I deploy this project?
 
----
+Simply open [Lovable](https://lovable.dev/projects/972a7ca4-9c64-4a25-a7b7-bf7c9564534b) and click on Share -> Publish.
 
-## 👥 Hak Akses & Login
+## Can I connect a custom domain to my Lovable project?
 
-| Role         | Akses Fitur                                                                 |
-|--------------|-----------------------------------------------------------------------------|
-| Administrator| Akses penuh: data master, user, akun, semua transaksi dan pengaturan       |
-| Manajemen    | Input transaksi, lihat laporan, akses grafik, ubah password dan profil     |
+Yes, you can!
 
-Setiap user bisa mengatur foto profil dan password mereka sendiri.
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
----
-
-## 📸 Dashboard
-
-- Ringkasan pendapatan & pengeluaran harian, bulanan, tahunan
-- Kalender aktif
-- Grafik keuangan per bulan & tahun
-- Data transaksi terbaru
-
----
-
-## 💡 Tips Penggunaan
-
-- Gunakan fitur kategori untuk memudahkan analisis keuangan
-- Cek grafik rutin untuk melihat tren pemasukan dan pengeluaran
-- Buat CoA yang sesuai dengan kebutuhan bisnismu
-
----
-
-## 👨‍💻 Kontribusi
-
-Pull request dan issue sangat diterima!  
-Untuk kontribusi:
-
-1. Fork repositori ini
-2. Buat branch fitur (`feature/nama-fitur`)
-3. Push dan buat pull request
-
----
-
-## 📄 Lisensi
-
-MIT License © [hoed](https://github.com/hoed)
----
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

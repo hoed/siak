@@ -1,3 +1,4 @@
+
 import { Database } from './types';
 
 // Extend the Database type to include chart_of_accounts

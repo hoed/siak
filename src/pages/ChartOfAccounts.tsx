@@ -1,37 +1,59 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
 } from '@/components/ui/table';
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { 
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+
+  DialogTrigger
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from '@/components/ui/select';
 import { 
-  PlusCircle, Edit, Trash2, ChevronRight, ChevronDown 
+  PlusCircle, 
+  Edit, 
+  Trash2, 
+  FileText, 
+  ChevronRight, 
+  ChevronDown 
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
-
-type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
-type ChartOfAccount = Database['public']['Tables']['chart_of_accounts']['Row'];
-
-interface ChartOfAccountNode extends ChartOfAccount {
-  id: string;
-  code: string;
-  children?: ChartOfAccountNode[];
-  level: number;
-  is_active: boolean;
-}
+import { toast } from 'sonner';
+import { AccountType, ChartOfAccount, ChartOfAccountNode } from '@/types/accounting';
+import { 
+  getChartOfAccounts, 
+  createChartOfAccount, 
+  updateChartOfAccount, 
+  deleteChartOfAccount,
+  buildAccountTree
+} from '@/services/accountingService';
 
 const ChartOfAccounts: React.FC = () => {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
@@ -39,132 +61,81 @@ const ChartOfAccounts: React.FC = () => {
   const [editingAccount, setEditingAccount] = useState<ChartOfAccount | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
-  const [accountForm, setAccountForm] = useState({
+  const [accountForm, setAccountForm] = useState<{
+    code: string;
+    name: string;
+    type: AccountType;
+    description: string;
+    parentId: string;
+  }>({
     code: '',
     name: '',
-    type: '',
+    type: 'asset',
     description: '',
-    parent_id: '',
-    is_active: true,
+    parentId: '',
   });
-  const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
-  const { data: accounts = [], isLoading, error: fetchError } = useQuery({
+  // Fetch chart of accounts
+  const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['chartOfAccounts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('chart_of_accounts')
-        .select('*');
-      if (error) throw new Error(error.message || 'Failed to fetch chart of accounts');
-      return data as ChartOfAccount[];
-    }
+    queryFn: getChartOfAccounts
   });
 
-  const buildAccountTree = (accounts: ChartOfAccount[]): ChartOfAccountNode[] => {
-    const map: { [key: string]: ChartOfAccountNode } = {};
-    const tree: ChartOfAccountNode[] = [];
-
-    accounts.forEach(account => {
-      map[account.id] = { ...account, children: [], level: 0, is_active: account.is_active };
-    });
-
-    accounts.forEach(account => {
-      const node = map[account.id];
-      if (account.parent_id) {
-        const parent = accounts.find(a => a.id === account.parent_id);
-        if (parent) {
-          node.level = 1;
-          map[parent.id].children!.push(node);
-        } else {
-          node.level = 0;
-          tree.push(node);
-        }
-      } else {
-        node.level = 0;
-        tree.push(node);
-      }
-    });
-
-    return tree;
-  };
-
+  // Account tree for hierarchical display
   const accountTree = React.useMemo(() => buildAccountTree(accounts), [accounts]);
 
+  // Create account mutation
   const createAccountMutation = useMutation({
-    mutationFn: async (data: Omit<ChartOfAccount, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
-      const { error } = await supabase
-        .from('chart_of_accounts')
-        .insert([data as any]);
-      if (error) throw new Error(error.message || 'Failed to create account');
-    },
+    mutationFn: createChartOfAccount,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chartOfAccounts'] });
       resetForm();
       setIsAddAccountOpen(false);
-    },
-    onError: (err: any) => {
-      setError(err.message || 'Failed to create account');
     }
   });
 
+  // Update account mutation
   const updateAccountMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<ChartOfAccount> }) => {
-      const { error } = await supabase
-        .from('chart_of_accounts')
-        .update(data)
-        .eq('id', id);
-      if (error) throw new Error(error.message || 'Failed to update account');
-    },
+    mutationFn: ({ id, data }: { id: string; data: Partial<ChartOfAccount> }) => 
+      updateChartOfAccount(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chartOfAccounts'] });
       resetForm();
       setEditingAccount(null);
-    },
-    onError: (err: any) => {
-      setError(err.message || 'Failed to update account');
     }
   });
 
+  // Delete account mutation
   const deleteAccountMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('chart_of_accounts')
-        .delete()
-        .eq('id', id);
-      if (error) throw new Error(error.message || 'Failed to delete account');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chartOfAccounts'] });
-      setIsDeleteConfirmOpen(false);
-    },
-    onError: (err: any) => {
-      setError(err.message || 'Failed to delete account');
+    mutationFn: deleteChartOfAccount,
+    onSuccess: (success) => {
+      if (success) {
+        queryClient.invalidateQueries({ queryKey: ['chartOfAccounts'] });
+        setIsDeleteConfirmOpen(false);
+      }
     }
   });
 
+  // Reset form
   const resetForm = () => {
     setAccountForm({
       code: '',
       name: '',
-      type: '',
+      type: 'asset',
       description: '',
-      parent_id: '',
-      is_active: true,
+      parentId: '',
     });
   };
 
+  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     const accountData = {
-      code: accountForm.code,
-      name: accountForm.name,
-      type: accountForm.type,
-      description: accountForm.description || null,
-      parent_id: accountForm.parent_id || null,
-      is_active: accountForm.is_active,
+      ...accountForm,
+      isActive: true
     };
     
     if (editingAccount) {
@@ -177,6 +148,7 @@ const ChartOfAccounts: React.FC = () => {
     }
   };
 
+  // Initialize edit form
   const handleEdit = (account: ChartOfAccount) => {
     setEditingAccount(account);
     setAccountForm({
@@ -184,23 +156,25 @@ const ChartOfAccounts: React.FC = () => {
       name: account.name,
       type: account.type,
       description: account.description || '',
-      parent_id: account.parent_id || '',
-      is_active: account.is_active,
+      parentId: account.parentId || '',
     });
     setIsAddAccountOpen(true);
   };
 
+  // Handle delete confirmation
   const handleDeleteClick = (id: string) => {
     setDeleteId(id);
     setIsDeleteConfirmOpen(true);
   };
 
+  // Handle delete confirmation
   const confirmDelete = () => {
     if (deleteId) {
       deleteAccountMutation.mutate(deleteId);
     }
   };
 
+  // Toggle expanded account
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedAccounts);
     if (newExpanded.has(id)) {
@@ -211,6 +185,19 @@ const ChartOfAccounts: React.FC = () => {
     setExpandedAccounts(newExpanded);
   };
 
+  // Get account type label in Indonesian
+  const getAccountTypeLabel = (type: AccountType): string => {
+    const types = {
+      asset: 'Aset',
+      liability: 'Kewajiban',
+      equity: 'Ekuitas',
+      revenue: 'Pendapatan',
+      expense: 'Beban'
+    };
+    return types[type];
+  };
+
+  // Render account rows recursively
   const renderAccountRows = (accounts: ChartOfAccountNode[], parentExpanded = true) => {
     return accounts.flatMap(account => {
       const hasChildren = account.children && account.children.length > 0;
@@ -219,7 +206,7 @@ const ChartOfAccounts: React.FC = () => {
       
       if (!isVisible) return [];
       
-      const indentation = account.level * 20;
+      const indentation = account.level * 20; // 20px per level
       
       const rows = [
         <TableRow key={account.id}>
@@ -244,9 +231,8 @@ const ChartOfAccounts: React.FC = () => {
             </div>
           </TableCell>
           <TableCell>{account.name}</TableCell>
-          <TableCell>{account.type}</TableCell>
+          <TableCell>{getAccountTypeLabel(account.type)}</TableCell>
           <TableCell>{account.description || '-'}</TableCell>
-          <TableCell>{account.is_active === true ? 'Yes' : 'No'}</TableCell>
           <TableCell>
             <div className="flex space-x-2">
               <Button
@@ -268,6 +254,7 @@ const ChartOfAccounts: React.FC = () => {
         </TableRow>
       ];
       
+      // Add children if expanded
       if (hasChildren && isExpanded) {
         rows.push(...renderAccountRows(account.children!, isExpanded));
       }
@@ -275,16 +262,6 @@ const ChartOfAccounts: React.FC = () => {
       return rows;
     });
   };
-
-  if (error || fetchError) {
-    return (
-      <MainLayout>
-        <div className="p-4 bg-red-100 text-red-700 rounded">
-          Error: {error || fetchError?.message || 'Failed to load chart of accounts'}
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
@@ -305,6 +282,7 @@ const ChartOfAccounts: React.FC = () => {
         </Button>
       </div>
 
+      {/* Chart of Accounts Table */}
       <div className="bg-card rounded-md border shadow-sm">
         <div className="p-4">
           <Table>
@@ -314,20 +292,19 @@ const ChartOfAccounts: React.FC = () => {
                 <TableHead>Nama</TableHead>
                 <TableHead>Tipe</TableHead>
                 <TableHead>Deskripsi</TableHead>
-                <TableHead>Aktif</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={5} className="text-center">
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : accountTree.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={5} className="text-center">
                     Belum ada data akun. Klik "Tambah Akun" untuk membuat akun baru.
                   </TableCell>
                 </TableRow>
@@ -339,6 +316,7 @@ const ChartOfAccounts: React.FC = () => {
         </div>
       </div>
 
+      {/* Add/Edit Account Sheet */}
       <Sheet open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
         <SheetContent side="right" className="sm:max-w-md">
           <SheetHeader>
@@ -366,20 +344,43 @@ const ChartOfAccounts: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Tipe</Label>
+              <Label htmlFor="type">Tipe Akun</Label>
               <Select
                 value={accountForm.type}
-                onValueChange={(value) => setAccountForm({ ...accountForm, type: value })}
+                onValueChange={(value) => setAccountForm({ ...accountForm, type: value as AccountType })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih tipe" />
+                  <SelectValue placeholder="Pilih tipe akun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Asset">Aset</SelectItem>
-                  <SelectItem value="Liability">Kewajiban</SelectItem>
-                  <SelectItem value="Equity">Ekuitas</SelectItem>
-                  <SelectItem value="Revenue">Pendapatan</SelectItem>
-                  <SelectItem value="Expense">Beban</SelectItem>
+                  <SelectItem value="asset">Aset</SelectItem>
+                  <SelectItem value="liability">Kewajiban</SelectItem>
+                  <SelectItem value="equity">Ekuitas</SelectItem>
+                  <SelectItem value="revenue">Pendapatan</SelectItem>
+                  <SelectItem value="expense">Beban</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parent">Akun Induk</Label>
+              <Select
+                value={accountForm.parentId}
+                onValueChange={(value) => setAccountForm({ ...accountForm, parentId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih akun induk (opsional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">-- Tidak Ada --</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem 
+                      key={account.id} 
+                      value={account.id}
+                      disabled={editingAccount?.id === account.id}
+                    >
+                      {account.code} - {account.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -390,40 +391,6 @@ const ChartOfAccounts: React.FC = () => {
                 value={accountForm.description}
                 onChange={(e) => setAccountForm({ ...accountForm, description: e.target.value })}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="parent_id">Akun Induk</Label>
-              <Select
-                value={accountForm.parent_id}
-                onValueChange={(value) => setAccountForm({ ...accountForm, parent_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih akun induk" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Tidak ada</SelectItem>
-                  {accounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.code} - {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="is_active">Aktif</Label>
-              <Select
-                value={accountForm.is_active ? 'true' : 'false'}
-                onValueChange={(value) => setAccountForm({ ...accountForm, is_active: value === 'true' })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Ya</SelectItem>
-                  <SelectItem value="false">Tidak</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="pt-4 space-x-2 flex justify-end">
               <Button 
@@ -444,6 +411,7 @@ const ChartOfAccounts: React.FC = () => {
         </SheetContent>
       </Sheet>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
