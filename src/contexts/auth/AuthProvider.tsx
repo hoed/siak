@@ -67,11 +67,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Profile data received:', data);
       if (data) {
+        // Check if user email is hudhoed@rumahost.com and set role to admin
+        let role = data.role as 'admin' | 'manager' | 'user';
+        if (data.email === 'hudhoed@rumahost.com') {
+          role = 'admin';
+          // Update the role in the database to admin
+          await supabase
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', userId);
+        }
+        
         setUser({
           id: data.id,
           name: data.name,
           email: data.email,
-          role: data.role as 'admin' | 'manager' | 'user',
+          role: role,
           profileImage: data.profile_image || undefined
         });
       } else {
@@ -84,18 +95,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (metadata?.name) {
           console.log('Creating profile from metadata:', metadata);
           // Create profile from metadata
+          let role = metadata.role || 'user';
+          
+          // If email is hudhoed@rumahost.com, set role to admin
+          if (userData.user.email === 'hudhoed@rumahost.com') {
+            role = 'admin';
+          }
+          
           await supabase.from('profiles').insert({
             id: userId,
             name: metadata.name,
             email: userData.user.email,
-            role: metadata.role || 'user' // Default to user role if not specified
+            role: role // Set to admin if special email, otherwise use metadata or default
           });
           
           setUser({
             id: userId,
             name: metadata.name,
             email: userData.user.email || '',
-            role: (metadata.role as 'admin' | 'manager' | 'user') || 'user',
+            role: (role as 'admin' | 'manager' | 'user'),
             profileImage: undefined
           });
         } else {
@@ -172,6 +190,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Email confirmation required
         toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun.');
       } else if (data.user && data.session) {
+        // Special case for hudhoed@rumahost.com
+        let role = 'user';
+        if (email === 'hudhoed@rumahost.com') {
+          role = 'admin';
+        }
+        
         // Auto-confirmed, create profile
         const { error: profileError } = await supabase
           .from('profiles')
@@ -179,7 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: data.user.id,
             name: name,
             email: email,
-            role: 'user' // Default role for new users is now 'user'
+            role: role
           });
           
         if (profileError) {

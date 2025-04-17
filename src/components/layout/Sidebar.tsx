@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -15,7 +14,6 @@ import {
   Calendar,
   LogOut,
   BookOpen,
-  Menu,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -136,17 +134,19 @@ const Sidebar: React.FC = () => {
     isOpen && isMobile ? "opacity-100" : "opacity-0 pointer-events-none"
   );
 
-  const menuToggleButton = (
-    <button 
-      onClick={toggleSidebar}
-      className={cn(
-        "md:hidden fixed z-50 bottom-4 right-4 bg-primary text-primary-foreground p-3 rounded-full shadow-lg",
-        isOpen && isMobile ? "right-[270px]" : "right-4"
-      )}
-    >
-      {isOpen ? <X size={24} /> : <Menu size={24} />}
-    </button>
-  );
+  useEffect(() => {
+    const handleSidebarToggle = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.dataset.sidebarTrigger === 'true') {
+        toggleSidebar();
+      }
+    };
+
+    document.addEventListener('click', handleSidebarToggle);
+    return () => {
+      document.removeEventListener('click', handleSidebarToggle);
+    };
+  }, [isOpen]);
 
   return (
     <>
@@ -156,7 +156,16 @@ const Sidebar: React.FC = () => {
         onClick={() => isMobile && setIsOpen(false)}
       />
       
-      {menuToggleButton}
+      <button 
+        onClick={toggleSidebar}
+        className={cn(
+          "md:hidden fixed z-50 bottom-4 right-4 bg-primary text-primary-foreground p-3 rounded-full shadow-lg",
+          isOpen && isMobile ? "right-[270px]" : "right-4"
+        )}
+        data-sidebar-toggle="true"
+      >
+        <X size={24} />
+      </button>
       
       <div className={sidebarClasses}>
         {/* Logo and app name */}
