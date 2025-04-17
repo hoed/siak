@@ -99,7 +99,7 @@ const Reports: React.FC = () => {
       toast({
         title: "Unduhan berhasil",
         description: `Laporan dalam format ${format === 'csv' ? 'CSV' : 'Excel'} telah berhasil diunduh`,
-        variant: "success"
+        variant: "default"  // Changed from "success" to "default"
       });
     }, 2000);
   };
