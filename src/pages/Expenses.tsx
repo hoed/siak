@@ -197,7 +197,7 @@ const Expenses: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Kategori</SelectItem>
+                <SelectItem value="all">Semua Kategori</SelectItem>
                 {categoryOptions.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
