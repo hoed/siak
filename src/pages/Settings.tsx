@@ -29,8 +29,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Lock, Building, Bell, Moon, Sun, Languages, CreditCard } from 'lucide-react';
+import { User, Lock, Building, Bell, Moon, Sun, Languages, CreditCard, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 const Settings: React.FC = () => {
   const { toast } = useToast();
@@ -40,6 +41,7 @@ const Settings: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
+  const [currency, setCurrency] = useState('IDR');
   
   const [profile, setProfile] = useState({
     name: user?.name || '',
@@ -122,6 +124,19 @@ const Settings: React.FC = () => {
     toast({
       title: `Mode ${isDarkMode ? 'Terang' : 'Gelap'} diaktifkan`,
       description: `Tampilan aplikasi telah diubah ke mode ${isDarkMode ? 'terang' : 'gelap'}`,
+    });
+  };
+  
+  const handleCurrencyChange = (value: string) => {
+    setCurrency(value);
+    toast({
+      title: 'Mata uang diperbarui',
+      description: `Mata uang utama telah diubah ke ${
+        value === 'IDR' ? 'Rupiah (IDR)' : 
+        value === 'USD' ? 'Dollar AS (USD)' : 
+        value === 'EUR' ? 'Euro (EUR)' : 
+        value === 'SGD' ? 'Dollar Singapura (SGD)' : value
+      }`,
     });
   };
 
@@ -306,8 +321,8 @@ const Settings: React.FC = () => {
                 
                 <div className="space-y-2">
                   <label htmlFor="currency" className="text-sm font-medium">Mata Uang</label>
-                  <Select defaultValue="IDR">
-                    <SelectTrigger>
+                  <Select value={currency} onValueChange={handleCurrencyChange}>
+                    <SelectTrigger id="currency">
                       <SelectValue placeholder="Pilih mata uang" />
                     </SelectTrigger>
                     <SelectContent>
@@ -315,6 +330,9 @@ const Settings: React.FC = () => {
                       <SelectItem value="USD">Dollar AS (USD)</SelectItem>
                       <SelectItem value="EUR">Euro (EUR)</SelectItem>
                       <SelectItem value="SGD">Dollar Singapura (SGD)</SelectItem>
+                      <SelectItem value="MYR">Ringgit Malaysia (MYR)</SelectItem>
+                      <SelectItem value="JPY">Yen Jepang (JPY)</SelectItem>
+                      <SelectItem value="CNY">Yuan China (CNY)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

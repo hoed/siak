@@ -15,7 +15,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  toggleSidebar: () => void;
+  sidebarOpen: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
   const { user, logout } = useAuth();
   const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
   const isMobile = useIsMobile();
@@ -26,30 +31,20 @@ const Header: React.FC = () => {
     document.documentElement.classList.toggle('dark');
   };
 
-  // Function to toggle sidebar
-  const toggleSidebar = () => {
-    // Find the sidebar toggle button and click it
-    const sidebarToggleButton = document.querySelector('[data-sidebar-toggle="true"]');
-    if (sidebarToggleButton && sidebarToggleButton instanceof HTMLButtonElement) {
-      sidebarToggleButton.click();
-    }
-  };
-
   return (
     <header className="bg-background z-10 w-full border-b px-4 py-3">
       <div className="flex items-center justify-between">
         {/* Mobile hamburger menu */}
-        {isMobile && (
-          <Button
-            variant="ghost" 
-            size="icon"
-            className="text-foreground mr-2"
-            onClick={toggleSidebar}
-            data-sidebar-trigger="true"
-          >
-            <Menu size={20} />
-          </Button>
-        )}
+        <Button
+          variant="ghost" 
+          size="icon"
+          className="text-foreground mr-2"
+          onClick={toggleSidebar}
+          data-sidebar-toggle="true"
+          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+        >
+          <Menu size={20} />
+        </Button>
         
         {/* Search */}
         <div className="relative max-w-md flex-1 mr-4">

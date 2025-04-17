@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -10,18 +10,39 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  
+  // Function to toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
   
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-col flex-1">
-        <Header />
+      <div
+        className={`${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } fixed inset-y-0 left-0 z-20 w-64 transition-transform duration-300 ease-in-out md:relative md:translate-x-0`}
+      >
+        <Sidebar />
+      </div>
+      
+      <div className="flex flex-col flex-1 w-full">
+        <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>
         </main>
       </div>
+      
+      {/* Overlay for mobile when sidebar is open */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-10"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 };

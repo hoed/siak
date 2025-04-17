@@ -25,8 +25,15 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Calendar, Download, FileText, BarChart, PieChart, TrendingUp, Filter } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Calendar, Download, FileText, BarChart, PieChart, TrendingUp, Filter, FileSpreadsheet } from 'lucide-react';
 import { AreaChart, Area, BarChart as RechartsBarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Sector } from 'recharts';
+import { useToast } from '@/components/ui/use-toast';
 
 // Dummy data for charts
 const monthlyData = [
@@ -56,6 +63,7 @@ const expenseCategoryData = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const Reports: React.FC = () => {
+  const { toast } = useToast();
   const [reportType, setReportType] = useState('income-expense');
   const [startDate, setStartDate] = useState('2025-01-01');
   const [endDate, setEndDate] = useState('2025-06-30');
@@ -73,6 +81,27 @@ const Reports: React.FC = () => {
   const handleGenerateReport = () => {
     // This would normally generate the report based on the selected parameters
     console.log('Generating report with:', { reportType, startDate, endDate, reportPeriod });
+    toast({
+      title: "Laporan berhasil dibuat",
+      description: `Laporan ${reportType} untuk periode ${startDate} hingga ${endDate} telah dibuat`
+    });
+  };
+
+  const downloadReport = (format: 'csv' | 'excel') => {
+    // In a real app, this would generate and download the file
+    toast({
+      title: `Mengunduh laporan dalam format ${format === 'csv' ? 'CSV' : 'Excel'}`,
+      description: "File akan diunduh secara otomatis dalam beberapa saat"
+    });
+    
+    // Simulate download delay
+    setTimeout(() => {
+      toast({
+        title: "Unduhan berhasil",
+        description: `Laporan dalam format ${format === 'csv' ? 'CSV' : 'Excel'} telah berhasil diunduh`,
+        variant: "success"
+      });
+    }, 2000);
   };
 
   return (
@@ -149,7 +178,25 @@ const Reports: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-between">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Unduh Laporan
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>CSV (.csv)</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  <span>Excel (.xlsx)</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={handleGenerateReport}>
               <FileText className="mr-2 h-4 w-4" />
               Buat Laporan
@@ -206,10 +253,24 @@ const Reports: React.FC = () => {
                 </div>
               </CardContent>
               <CardFooter className="justify-end">
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  Unduh
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4" />
+                      Unduh
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>CSV (.csv)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      <span>Excel (.xlsx)</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardFooter>
             </Card>
 
@@ -243,10 +304,24 @@ const Reports: React.FC = () => {
                 </div>
               </CardContent>
               <CardFooter className="justify-end">
-                <Button variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  Unduh
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4" />
+                      Unduh
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>CSV (.csv)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      <span>Excel (.xlsx)</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardFooter>
             </Card>
           </div>
@@ -255,9 +330,29 @@ const Reports: React.FC = () => {
         <TabsContent value="charts">
           <div className="grid grid-cols-1 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Perbandingan Pendapatan dan Pengeluaran</CardTitle>
-                <CardDescription>Januari - Juni 2025</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Perbandingan Pendapatan dan Pengeluaran</CardTitle>
+                  <CardDescription>Januari - Juni 2025</CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4" />
+                      Unduh Grafik
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>CSV (.csv)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      <span>Excel (.xlsx)</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
@@ -289,9 +384,29 @@ const Reports: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Distribusi Pendapatan</CardTitle>
-                  <CardDescription>Berdasarkan Kategori</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Distribusi Pendapatan</CardTitle>
+                    <CardDescription>Berdasarkan Kategori</CardDescription>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Unduh
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>CSV (.csv)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        <span>Excel (.xlsx)</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
@@ -320,9 +435,29 @@ const Reports: React.FC = () => {
               </Card>
               
               <Card>
-                <CardHeader>
-                  <CardTitle>Distribusi Pengeluaran</CardTitle>
-                  <CardDescription>Berdasarkan Kategori</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Distribusi Pengeluaran</CardTitle>
+                    <CardDescription>Berdasarkan Kategori</CardDescription>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Unduh
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>CSV (.csv)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        <span>Excel (.xlsx)</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
@@ -355,9 +490,29 @@ const Reports: React.FC = () => {
         
         <TabsContent value="trends">
           <Card>
-            <CardHeader>
-              <CardTitle>Tren Keuangan</CardTitle>
-              <CardDescription>Januari - Juni 2025</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Tren Keuangan</CardTitle>
+                <CardDescription>Januari - Juni 2025</CardDescription>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Unduh Laporan Tren
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => downloadReport('csv')}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>CSV (.csv)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => downloadReport('excel')}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    <span>Excel (.xlsx)</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
@@ -399,12 +554,6 @@ const Reports: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="justify-end">
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Unduh Laporan Tren
-              </Button>
-            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
