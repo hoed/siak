@@ -44,6 +44,7 @@ import { v4 as uuidv4 } from 'uuid';
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
 type Debt = Database['public']['Tables']['debts']['Row'];
 type Transaction = Database['public']['Tables']['transactions']['Row'];
+type Account = Database['public']['Tables']['accounts']['Row'];
 
 const Suppliers: React.FC = () => {
   const { toast } = useToast();
@@ -54,6 +55,7 @@ const Suppliers: React.FC = () => {
   const [isEditSupplierOpen, setIsEditSupplierOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
   const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   const [newSupplier, setNewSupplier] = useState({
@@ -71,12 +73,18 @@ const Suppliers: React.FC = () => {
     invoice_number: `INV-SUPP-${uuidv4().slice(0, 8)}`,
   });
 
-  const canModify = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'accountant';
+  const [newPayment, setNewPayment] = useState({
+    amount: '',
+    description: '',
+    date: '',
+  });
+
+  const canModify = user?.role && ['admin', 'manager', 'accountant'].includes(user.role);
 
   // Fetch suppliers
-  const { data: suppliers = [], isLoading, error } = useQuery<Supplier[], Error>({
+  const { data: suppliers = [], isLoading, error } = useQuery({
     queryKey: ['suppliers'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Supplier[]> => {
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
@@ -87,9 +95,9 @@ const Suppliers: React.FC = () => {
   });
 
   // Fetch debts for selected supplier
-  const { data: debts = [] } = useQuery<Debt[], Error>({
+  const { data: debts = [] } = useQuery({
     queryKey: ['debts', selectedSupplier?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<Debt[]> => {
       if (!selectedSupplier) return [];
       const { data, error } = await supabase
         .from('debts')
@@ -103,9 +111,9 @@ const Suppliers: React.FC = () => {
   });
 
   // Fetch transactions (payments) for selected supplier
-  const { data: transactions = [] } = useQuery<Transaction[], Error>({
+  const { data: transactions = [] } = useQuery({
     queryKey: ['transactions', selectedSupplier?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<Transaction[]> => {
       if (!selectedSupplier) return [];
       const { data, error } = await supabase
         .from('transactions')
@@ -119,10 +127,10 @@ const Suppliers: React.FC = () => {
     enabled: !!selectedSupplier,
   });
 
-  // Fetch accounts for transaction insertion
-  const { data: accounts = [] } = useQuery<Database['public']['Tables']['accounts']['Row'][], Error>({
+  // Fetch accounts
+  const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Account[]> => {
       const { data, error } = await supabase
         .from('accounts')
         .select('*');
@@ -254,6 +262,35 @@ const Suppliers: React.FC = () => {
     },
   });
 
+  // Add payment mutation
+  const addPaymentMutation = useMutation({
+    mutationFn: async (transaction: Database['public']['Tables']['transactions']['Insert']) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([transaction])
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions', selectedSupplier?.id] });
+      setNewPayment({ amount: '', description: '', date: '' });
+      setIsAddPaymentOpen(false);
+      toast({
+        title: 'Pembayaran berhasil ditambahkan',
+        description: `Pembayaran untuk ${selectedSupplier?.name} telah ditambahkan`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Gagal menambahkan pembayaran',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const filteredSuppliers = suppliers.filter(
     (supplier) =>
       supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -305,6 +342,26 @@ const Suppliers: React.FC = () => {
       due_date: newDebt.due_date,
       invoice_number: newDebt.invoice_number,
       is_paid: false,
+      created_by: user?.id,
+    });
+  };
+
+  const handleAddPayment = () => {
+    if (!selectedSupplier || !newPayment.amount || !newPayment.date || accounts.length === 0) {
+      toast({
+        title: 'Data tidak lengkap',
+        description: 'Mohon lengkapi jumlah, tanggal, dan pastikan akun tersedia',
+        variant: 'destructive',
+      });
+      return;
+    }
+    addPaymentMutation.mutate({
+      account_id: accounts[0].id,
+      supplier_id: selectedSupplier.id,
+      amount: parseFloat(newPayment.amount),
+      description: newPayment.description || 'Pembayaran ke pemasok',
+      date: newPayment.date,
+      type: 'expense',
       created_by: user?.id,
     });
   };
@@ -582,6 +639,14 @@ const Suppliers: React.FC = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Pembayaran (Pengeluaran)</CardTitle>
+                  {canModify && (
+                    <Button
+                      onClick={() => setIsAddPaymentOpen(true)}
+                      disabled={accounts.length === 0 || addPaymentMutation.isPending}
+                    >
+                      Tambah Pembayaran
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -687,7 +752,7 @@ const Suppliers: React.FC = () => {
                 type="number"
                 value={newDebt.amount}
                 onChange={(e) => setNewDebt({ ...newDebt, amount: e.target.value })}
-                placeholder="3000000"
+                placeholder="5000000"
               />
             </div>
             <div className="space-y-2">
@@ -696,7 +761,7 @@ const Suppliers: React.FC = () => {
                 id="description"
                 value={newDebt.description}
                 onChange={(e) => setNewDebt({ ...newDebt, description: e.target.value })}
-                placeholder="Invoice untuk barang"
+                placeholder="Invoice untuk pembelian"
               />
             </div>
             <div className="space-y-2">
@@ -731,6 +796,61 @@ const Suppliers: React.FC = () => {
               disabled={addDebtMutation.isPending}
             >
               {addDebtMutation.isPending ? 'Menambahkan...' : 'Tambah Utang'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Pembayaran</DialogTitle>
+            <DialogDescription>Tambahkan pembayaran baru untuk {selectedSupplier?.name}.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="amount" className="text-sm font-medium">Jumlah</label>
+              <Input
+                id="amount"
+                type="number"
+                value={newPayment.amount}
+                onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
+                placeholder="2000000"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="description" className="text-sm font-medium">Deskripsi</label>
+              <Input
+                id="description"
+                value={newPayment.description}
+                onChange={(e) => setNewPayment({ ...newPayment, description: e.target.value })}
+                placeholder="Pembayaran untuk invoice"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="date" className="text-sm font-medium">Tanggal</label>
+              <Input
+                id="date"
+                type="date"
+                value={newPayment.date}
+                onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddPaymentOpen(false)}
+              disabled={addPaymentMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleAddPayment}
+              disabled={addPaymentMutation.isPending || accounts.length === 0}
+            >
+              {addPaymentMutation.isPending ? 'Menambahkan...' : 'Tambah Pembayaran'}
             </Button>
           </DialogFooter>
         </DialogContent>

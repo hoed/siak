@@ -17,6 +17,11 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Validate role to ensure it matches user_role enum
+const validRoles: Database['public']['Enums']['user_role'][] = ['admin', 'manager', 'accountant', 'user'];
+const isValidRole = (role: any): role is Database['public']['Enums']['user_role'] =>
+  validRoles.includes(role);
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,14 +34,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('profiles')
           .select('id, email, role')
           .eq('id', sessionData.session.user.id)
-          .single();
-        if (error) {
+          .single() as { data: Database['public']['Tables']['profiles']['Row'] | null; error: any };
+
+        if (error || !profile) {
           console.error('Error fetching profile:', error);
         } else {
+          const role = isValidRole(profile.role) ? profile.role : 'user';
           setUser({
             id: profile.id,
             email: profile.email,
-            role: profile.role,
+            role,
           });
         }
       }
@@ -53,13 +60,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', session.user.id)
           .single()
           .then(({ data: profile, error }) => {
-            if (error) {
+            if (error || !profile) {
               console.error('Error fetching profile:', error);
             } else {
+              const role = isValidRole(profile.role) ? profile.role : 'user';
               setUser({
                 id: profile.id,
                 email: profile.email,
-                role: profile.role,
+                role,
               });
             }
             setLoading(false);
