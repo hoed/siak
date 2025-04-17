@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -20,7 +19,7 @@ const Login: React.FC = () => {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-between bg-background p-4">
       <div className="w-full max-w-md space-y-8 text-center">
         {/* Logo and app name */}
         <AppLogo />
@@ -49,6 +48,11 @@ const Login: React.FC = () => {
           </Tabs>
         </Card>
       </div>
+
+      {/* Footer Section */}
+      <footer className="w-full text-center py-4 text-muted-foreground text-sm">
+        <p>&copy; {new Date().getFullYear()} Hoed's Project. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
