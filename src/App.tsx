@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +20,8 @@ import Reports from "./pages/Reports";
 import Categories from "./pages/Categories";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import Customers from "./pages/Customers";
+import Suppliers from "./pages/Suppliers";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,16 @@ const App = () => (
             <Route path="/users" element={
               <RequireAuth requiredRole="admin">
                 <Users />
+              </RequireAuth>
+            } />
+            <Route path="/customers" element={
+              <RequireAuth>
+                <Customers />
+              </RequireAuth>
+            } />
+            <Route path="/suppliers" element={
+              <RequireAuth>
+                <Suppliers />
               </RequireAuth>
             } />
             <Route path="/settings" element={

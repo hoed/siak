@@ -14,7 +14,9 @@ import {
   Calendar,
   LogOut,
   BookOpen,
-  X
+  X,
+  User,
+  Truck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -102,6 +104,18 @@ const Sidebar: React.FC = () => {
       name: 'Pengguna', 
       path: '/users',
       roles: ['admin']
+    },
+    { 
+      icon: <User size={20} />, 
+      name: 'Pelanggan', 
+      path: '/customers',
+      roles: ['admin', 'manager', 'user']
+    },
+    { 
+      icon: <Truck size={20} />, 
+      name: 'Pemasok', 
+      path: '/suppliers',
+      roles: ['admin', 'manager', 'user']
     },
     { 
       icon: <Settings size={20} />, 

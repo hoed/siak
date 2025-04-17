@@ -88,6 +88,36 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          phone: string
+          address: string | null
+          status: "active" | "inactive"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          phone: string
+          address?: string | null
+          status?: "active" | "inactive"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          phone?: string
+          address?: string | null
+          status?: "active" | "inactive"
+          created_at?: string
+        }
+        Relationships: []
+      }
       debts: {
         Row: {
           amount: number
@@ -205,6 +235,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          phone: string
+          address: string | null
+          status: "active" | "inactive"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          phone: string
+          address?: string | null
+          status?: "active" | "inactive"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          phone?: string
+          address?: string | null
+          status?: "active" | "inactive"
+          created_at?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
