@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: data.id,
           name: data.name,
           email: data.email,
-          role: data.role as 'admin' | 'manager',
+          role: data.role as 'admin' | 'manager' | 'user',
           profileImage: data.profile_image || undefined
         });
       } else {
@@ -81,21 +81,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: userData } = await supabase.auth.getUser();
         const metadata = userData?.user?.user_metadata;
         
-        if (metadata?.name && metadata?.role) {
+        if (metadata?.name) {
           console.log('Creating profile from metadata:', metadata);
           // Create profile from metadata
           await supabase.from('profiles').insert({
             id: userId,
             name: metadata.name,
             email: userData.user.email,
-            role: metadata.role
+            role: metadata.role || 'user' // Default to user role if not specified
           });
           
           setUser({
             id: userId,
             name: metadata.name,
             email: userData.user.email || '',
-            role: metadata.role as 'admin' | 'manager',
+            role: (metadata.role as 'admin' | 'manager' | 'user') || 'user',
             profileImage: undefined
           });
         } else {
@@ -158,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name,
-            role: 'manager' // Default role for new users
+            role: 'user' // Default role for new users is now 'user'
           }
         }
       });
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: data.user.id,
             name: name,
             email: email,
-            role: 'manager' // Default role for new users
+            role: 'user' // Default role for new users is now 'user'
           });
           
         if (profileError) {
