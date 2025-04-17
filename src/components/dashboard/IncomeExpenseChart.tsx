@@ -47,41 +47,41 @@ const IncomeExpenseChart: React.FC<IncomeExpenseChartProps> = ({ monthlyData, ye
     <Card className="dashboard-card">
       <CardHeader className="dashboard-card-header">
         <CardTitle>Income & Expenses</CardTitle>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="yearly">Yearly</TabsTrigger>
-          </TabsList>
-        </Tabs>
       </CardHeader>
       <CardContent className="p-0">
         <div className="p-6">
-          <TabsContent value="monthly" className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `$${value}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="income" fill="#4CAF50" name="Income" />
-                <Bar dataKey="expense" fill="#F44336" name="Expense" />
-              </BarChart>
-            </ResponsiveContainer>
-          </TabsContent>
-          <TabsContent value="yearly" className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yearlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="year" />
-                <YAxis tickFormatter={(value) => `$${value}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="income" fill="#4CAF50" name="Income" />
-                <Bar dataKey="expense" fill="#F44336" name="Expense" />
-              </BarChart>
-            </ResponsiveContainer>
-          </TabsContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="yearly">Yearly</TabsTrigger>
+            </TabsList>
+            <TabsContent value="monthly" className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" />
+                  <YAxis tickFormatter={(value) => `$${value}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="income" fill="#4CAF50" name="Income" />
+                  <Bar dataKey="expense" fill="#F44336" name="Expense" />
+                </BarChart>
+              </ResponsiveContainer>
+            </TabsContent>
+            <TabsContent value="yearly" className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={yearlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="year" />
+                  <YAxis tickFormatter={(value) => `$${value}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="income" fill="#4CAF50" name="Income" />
+                  <Bar dataKey="expense" fill="#F44336" name="Expense" />
+                </BarChart>
+              </ResponsiveContainer>
+            </TabsContent>
+          </Tabs>
         </div>
       </CardContent>
     </Card>
