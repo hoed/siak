@@ -21,14 +21,14 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-8 text-center">
         {/* Logo and app name */}
         <AppLogo />
 
         <Card>
-          <CardHeader>
-            <CardTitle>Selamat Datang</CardTitle>
-            <CardDescription>
+          <CardHeader className="text-center">
+            <CardTitle className="text-center">Selamat Datang</CardTitle>
+            <CardDescription className="text-center">
               Kelola keuangan Anda dengan mudah
             </CardDescription>
           </CardHeader>

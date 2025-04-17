@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -13,17 +12,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Set up auth state listener
   useEffect(() => {
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth state changed:', event, currentSession);
         setSession(currentSession);
         
         if (currentSession?.user) {
-          // Fetch user profile after session is set
-          // Use setTimeout to prevent Supabase auth deadlock
           setTimeout(() => {
             fetchUserProfile(currentSession.user.id);
           }, 0);
@@ -34,7 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       console.log('Initial session check:', currentSession);
       setSession(currentSession);
@@ -51,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Fetch user profile from the profiles table
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
@@ -67,11 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Profile data received:', data);
       if (data) {
-        // Check if user email is hudhoed@rumahost.com and set role to admin
         let role = data.role as 'admin' | 'manager' | 'user';
         if (data.email === 'hudhoed@rumahost.com') {
           role = 'admin';
-          // Update the role in the database to admin
           await supabase
             .from('profiles')
             .update({ role: 'admin' })
@@ -88,16 +79,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.error('No profile found for user:', userId);
         
-        // Check if we can create the profile from user metadata
         const { data: userData } = await supabase.auth.getUser();
         const metadata = userData?.user?.user_metadata;
         
         if (metadata?.name) {
           console.log('Creating profile from metadata:', metadata);
-          // Create profile from metadata
           let role = metadata.role || 'user';
           
-          // If email is hudhoed@rumahost.com, set role to admin
           if (userData.user.email === 'hudhoed@rumahost.com') {
             role = 'admin';
           }
@@ -106,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: userId,
             name: metadata.name,
             email: userData.user.email,
-            role: role // Set to admin if special email, otherwise use metadata or default
+            role: role
           });
           
           setUser({
@@ -128,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Login function
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -149,7 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // Translate common Supabase errors
       let errorMessage = 'Login gagal';
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = 'Email atau kata sandi tidak valid';
@@ -165,7 +151,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Signup function
   const signup = async (email: string, password: string, name: string) => {
     try {
       setLoading(true);
@@ -176,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name,
-            role: 'user' // Default role for new users is now 'user'
+            role: 'user'
           }
         }
       });
@@ -185,18 +170,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      // If auto-confirmation is enabled, also create the profile right away
       if (data.user && !data.session) {
-        // Email confirmation required
         toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun.');
       } else if (data.user && data.session) {
-        // Special case for hudhoed@rumahost.com
         let role = 'user';
         if (email === 'hudhoed@rumahost.com') {
           role = 'admin';
         }
         
-        // Auto-confirmed, create profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -231,7 +212,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Logout function
   const logout = async () => {
     try {
       await supabase.auth.signOut();
@@ -242,12 +222,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update user function
   const updateUser = async (userData: Partial<User>) => {
     if (!user) return;
     
     try {
-      // Update profile in Supabase
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -260,7 +238,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      // Update local state
       setUser(prev => prev ? { ...prev, ...userData } : null);
       toast.success('Profil berhasil diperbarui');
     } catch (error: any) {
