@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { Search, UserPlus, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth, User } from '@/contexts/auth/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -706,7 +706,7 @@ const Suppliers: React.FC = () => {
                   <TableBody>
                     {debts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4">
+                        <TableCell colSpan= {5} className="text-center py-4">
                           Tidak ada utang ditemukan
                         </TableCell>
                       </TableRow>
