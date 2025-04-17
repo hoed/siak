@@ -32,18 +32,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Search, UserPlus, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
+import { Search, UserPlus, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-import { format } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 
 type Customer = Database['public']['Tables']['customers']['Row'];
-type Receivable = Database['public']['Tables']['receivables']['Row'];
-type Transaction = Database['public']['Tables']['transactions']['Row'];
 
 const Customers: React.FC = () => {
   const { toast } = useToast();
@@ -52,8 +48,6 @@ const Customers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
-  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
-  const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const [newCustomer, setNewCustomer] = useState({
@@ -64,14 +58,7 @@ const Customers: React.FC = () => {
     status: 'active' as 'active' | 'inactive',
   });
 
-  const [newReceivable, setNewReceivable] = useState({
-    amount: '',
-    description: '',
-    due_date: '',
-    invoice_number: `INV-CUST-${uuidv4().slice(0, 8)}`,
-  });
-
-  const canModify = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'accountant';
+  const canModify = user?.role === 'admin' || user?.role === 'manager';
 
   // Fetch customers
   const { data: customers = [], isLoading, error } = useQuery<Customer[], Error>({
@@ -81,51 +68,7 @@ const Customers: React.FC = () => {
         .from('customers')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
-
-  // Fetch receivables for selected customer
-  const { data: receivables = [] } = useQuery<Receivable[], Error>({
-    queryKey: ['receivables', selectedCustomer?.id],
-    queryFn: async () => {
-      if (!selectedCustomer) return [];
-      const { data, error } = await supabase
-        .from('receivables')
-        .select('*')
-        .eq('customer_id', selectedCustomer.id)
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!selectedCustomer,
-  });
-
-  // Fetch transactions (payments) for selected customer
-  const { data: transactions = [] } = useQuery<Transaction[], Error>({
-    queryKey: ['transactions', selectedCustomer?.id],
-    queryFn: async () => {
-      if (!selectedCustomer) return [];
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('customer_id', selectedCustomer.id)
-        .eq('type', 'income')
-        .order('date', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!selectedCustomer,
-  });
-
-  // Fetch accounts for transaction insertion
-  const { data: accounts = [] } = useQuery<Database['public']['Tables']['accounts']['Row'][], Error>({
-    queryKey: ['accounts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*');
+      
       if (error) throw new Error(error.message);
       return data;
     },
@@ -139,12 +82,19 @@ const Customers: React.FC = () => {
         .insert([customer])
         .select()
         .single();
+      
       if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      setNewCustomer({ name: '', email: '', phone: '', address: '', status: 'active' });
+      setNewCustomer({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        status: 'active',
+      });
       setIsAddCustomerOpen(false);
       toast({
         title: 'Pelanggan berhasil ditambahkan',
@@ -175,6 +125,7 @@ const Customers: React.FC = () => {
         .eq('id', customer.id)
         .select()
         .single();
+      
       if (error) throw new Error(error.message);
       return data;
     },
@@ -202,6 +153,7 @@ const Customers: React.FC = () => {
         .from('customers')
         .delete()
         .eq('id', customerId);
+      
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -214,40 +166,6 @@ const Customers: React.FC = () => {
     onError: (error: Error) => {
       toast({
         title: 'Gagal menghapus pelanggan',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Add receivable mutation
-  const addReceivableMutation = useMutation({
-    mutationFn: async (receivable: Database['public']['Tables']['receivables']['Insert']) => {
-      const { data, error } = await supabase
-        .from('receivables')
-        .insert([receivable])
-        .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['receivables', selectedCustomer?.id] });
-      setNewReceivable({
-        amount: '',
-        description: '',
-        due_date: '',
-        invoice_number: `INV-CUST-${uuidv4().slice(0, 8)}`,
-      });
-      setIsAddReceivableOpen(false);
-      toast({
-        title: 'Piutang berhasil ditambahkan',
-        description: `Piutang untuk ${selectedCustomer?.name} telah ditambahkan`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal menambahkan piutang',
         description: error.message,
         variant: 'destructive',
       });
@@ -269,6 +187,7 @@ const Customers: React.FC = () => {
       });
       return;
     }
+
     addCustomerMutation.mutate(newCustomer);
   };
 
@@ -281,32 +200,12 @@ const Customers: React.FC = () => {
     if (!canModify) {
       toast({
         title: 'Aksi tidak diizinkan',
-        description: 'Hanya admin, manajer, atau akuntan yang dapat menghapus pelanggan',
+        description: 'Hanya admin atau manajer yang dapat menghapus pelanggan',
         variant: 'destructive',
       });
       return;
     }
     deleteCustomerMutation.mutate(customerId);
-  };
-
-  const handleAddReceivable = () => {
-    if (!selectedCustomer || !newReceivable.amount || !newReceivable.due_date) {
-      toast({
-        title: 'Data tidak lengkap',
-        description: 'Mohon lengkapi jumlah dan tanggal jatuh tempo',
-        variant: 'destructive',
-      });
-      return;
-    }
-    addReceivableMutation.mutate({
-      customer_id: selectedCustomer.id,
-      amount: parseFloat(newReceivable.amount),
-      description: newReceivable.description || 'Invoice',
-      due_date: newReceivable.due_date,
-      invoice_number: newReceivable.invoice_number,
-      is_received: false,
-      created_by: user?.id,
-    });
   };
 
   if (error) {
@@ -322,7 +221,9 @@ const Customers: React.FC = () => {
       <div className="pb-4 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Pelanggan</h1>
-          <p className="text-muted-foreground">Kelola data pelanggan perusahaan</p>
+          <p className="text-muted-foreground">
+            Kelola data pelanggan perusahaan
+          </p>
         </div>
         <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
           <DialogTrigger asChild>
@@ -334,43 +235,61 @@ const Customers: React.FC = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Tambah Pelanggan Baru</DialogTitle>
-              <DialogDescription>Masukkan informasi pelanggan baru.</DialogDescription>
+              <DialogDescription>
+                Masukkan informasi pelanggan baru.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">Nama Pelanggan</label>
+                <label htmlFor="name" className="text-sm font-medium">
+                  Nama Pelanggan
+                </label>
                 <Input
                   id="name"
                   value={newCustomer.name}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                  onChange={(e) =>
+                    setNewCustomer({ ...newCustomer, name: e.target.value })
+                  }
                   placeholder="Nama pelanggan atau perusahaan"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <label htmlFor="email" className="text-sm font-medium">
+                  Email
+                </label>
                 <Input
                   id="email"
                   type="email"
                   value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                  onChange={(e) =>
+                    setNewCustomer({ ...newCustomer, email: e.target.value })
+                  }
                   placeholder="email@example.com"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-medium">Nomor Telepon</label>
+                <label htmlFor="phone" className="text-sm font-medium">
+                  Nomor Telepon
+                </label>
                 <Input
                   id="phone"
                   value={newCustomer.phone}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                  onChange={(e) =>
+                    setNewCustomer({ ...newCustomer, phone: e.target.value })
+                  }
                   placeholder="081234567890"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="address" className="text-sm font-medium">Alamat</label>
+                <label htmlFor="address" className="text-sm font-medium">
+                  Alamat
+                </label>
                 <Input
                   id="address"
                   value={newCustomer.address}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                  onChange={(e) =>
+                    setNewCustomer({ ...newCustomer, address: e.target.value })
+                  }
                   placeholder="Alamat pelanggan"
                 />
               </div>
@@ -428,7 +347,10 @@ const Customers: React.FC = () => {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-muted-foreground"
+                    >
                       Tidak ada pelanggan yang ditemukan
                     </TableCell>
                   </TableRow>
@@ -459,15 +381,6 @@ const Customers: React.FC = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedCustomer(customer);
-                                setIsViewDetailsOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Lihat Detail
-                            </DropdownMenuItem>
                             {canModify && (
                               <DropdownMenuItem
                                 onClick={() => {
@@ -500,53 +413,74 @@ const Customers: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerOpen} onOpenChange={setIsEditCustomerOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Pelanggan</DialogTitle>
-            <DialogDescription>Perbarui informasi pelanggan.</DialogDescription>
+            <DialogDescription>
+              Perbarui informasi pelanggan.
+            </DialogDescription>
           </DialogHeader>
           {selectedCustomer && (
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <label htmlFor="edit-name" className="text-sm font-medium">Nama Pelanggan</label>
+                <label htmlFor="edit-name" className="text-sm font-medium">
+                  Nama Pelanggan
+                </label>
                 <Input
                   id="edit-name"
                   value={selectedCustomer.name}
                   onChange={(e) =>
-                    setSelectedCustomer({ ...selectedCustomer, name: e.target.value })
+                    setSelectedCustomer({
+                      ...selectedCustomer,
+                      name: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="edit-email" className="text-sm font-medium">Email</label>
+                <label htmlFor="edit-email" className="text-sm font-medium">
+                  Email
+                </label>
                 <Input
                   id="edit-email"
                   type="email"
                   value={selectedCustomer.email}
                   onChange={(e) =>
-                    setSelectedCustomer({ ...selectedCustomer, email: e.target.value })
+                    setSelectedCustomer({
+                      ...selectedCustomer,
+                      email: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="edit-phone" className="text-sm font-medium">Nomor Telepon</label>
+                <label htmlFor="edit-phone" className="text-sm font-medium">
+                  Nomor Telepon
+                </label>
                 <Input
                   id="edit-phone"
                   value={selectedCustomer.phone}
                   onChange={(e) =>
-                    setSelectedCustomer({ ...selectedCustomer, phone: e.target.value })
+                    setSelectedCustomer({
+                      ...selectedCustomer,
+                      phone: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="edit-address" className="text-sm font-medium">Alamat</label>
+                <label htmlFor="edit-address" className="text-sm font-medium">
+                  Alamat
+                </label>
                 <Input
                   id="edit-address"
                   value={selectedCustomer.address || ''}
                   onChange={(e) =>
-                    setSelectedCustomer({ ...selectedCustomer, address: e.target.value })
+                    setSelectedCustomer({
+                      ...selectedCustomer,
+                      address: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -565,174 +499,6 @@ const Customers: React.FC = () => {
               disabled={updateCustomerMutation.isPending || !canModify}
             >
               {updateCustomerMutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Details Dialog */}
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Detail Pelanggan: {selectedCustomer?.name}</DialogTitle>
-            <DialogDescription>Lihat pembayaran dan piutang pelanggan.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Pembayaran (Pendapatan)</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead>Jumlah</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-4">
-                          Tidak ada pembayaran ditemukan
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      transactions.map((txn) => (
-                        <TableRow key={txn.id}>
-                          <TableCell>{format(new Date(txn.date), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>{txn.description}</TableCell>
-                          <TableCell>Rp {txn.amount.toLocaleString('id-ID')}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Piutang</CardTitle>
-                  {canModify && (
-                    <Button
-                      onClick={() => setIsAddReceivableOpen(true)}
-                      disabled={addReceivableMutation.isPending}
-                    >
-                      Tambah Piutang
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nomor Invoice</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead>Jumlah</TableHead>
-                      <TableHead>Jatuh Tempo</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {receivables.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4">
-                          Tidak ada piutang ditemukan
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      receivables.map((rec) => (
-                        <TableRow key={rec.id}>
-                          <TableCell>{rec.invoice_number}</TableCell>
-                          <TableCell>{rec.description}</TableCell>
-                          <TableCell>Rp {rec.amount.toLocaleString('id-ID')}</TableCell>
-                          <TableCell>{format(new Date(rec.due_date), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>
-                            {rec.is_received ? 'Diterima' : 'Belum Diterima'}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewDetailsOpen(false)}
-            >
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Receivable Dialog */}
-      <Dialog open={isAddReceivableOpen} onOpenChange={setIsAddReceivableOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Piutang</DialogTitle>
-            <DialogDescription>Tambahkan piutang baru untuk {selectedCustomer?.name}.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">Jumlah</label>
-              <Input
-                id="amount"
-                type="number"
-                value={newReceivable.amount}
-                onChange={(e) => setNewReceivable({ ...newReceivable, amount: e.target.value })}
-                placeholder="5000000"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">Deskripsi</label>
-              <Input
-                id="description"
-                value={newReceivable.description}
-                onChange={(e) => setNewReceivable({ ...newReceivable, description: e.target.value })}
-                placeholder="Invoice untuk layanan"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="due_date" className="text-sm font-medium">Jatuh Tempo</label>
-              <Input
-                id="due_date"
-                type="date"
-                value={newReceivable.due_date}
-                onChange={(e) => setNewReceivable({ ...newReceivable, due_date: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="invoice_number" className="text-sm font-medium">Nomor Invoice</label>
-              <Input
-                id="invoice_number"
-                value={newReceivable.invoice_number}
-                onChange={(e) => setNewReceivable({ ...newReceivable, invoice_number: e.target.value })}
-                placeholder="INV-CUST-XXXX"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddReceivableOpen(false)}
-              disabled={addReceivableMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleAddReceivable}
-              disabled={addReceivableMutation.isPending}
-            >
-              {addReceivableMutation.isPending ? 'Menambahkan...' : 'Tambah Piutang'}
             </Button>
           </DialogFooter>
         </DialogContent>

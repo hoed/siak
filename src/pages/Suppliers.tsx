@@ -32,19 +32,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Search, UserPlus, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
+import { Search, UserPlus, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth, User } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-import { format } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
-type Debt = Database['public']['Tables']['debts']['Row'];
-type Transaction = Database['public']['Tables']['transactions']['Row'];
-type Account = Database['public']['Tables']['accounts']['Row'];
 
 const Suppliers: React.FC = () => {
   const { toast } = useToast();
@@ -53,9 +48,6 @@ const Suppliers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
   const [isEditSupplierOpen, setIsEditSupplierOpen] = useState(false);
-  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
-  const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
-  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   const [newSupplier, setNewSupplier] = useState({
@@ -66,74 +58,17 @@ const Suppliers: React.FC = () => {
     status: 'active' as 'active' | 'inactive',
   });
 
-  const [newDebt, setNewDebt] = useState({
-    amount: '',
-    description: '',
-    due_date: '',
-    invoice_number: `INV-SUPP-${uuidv4().slice(0, 8)}`,
-  });
-
-  const [newPayment, setNewPayment] = useState({
-    amount: '',
-    description: '',
-    date: '',
-  });
-
-  const canModify = user?.role && ['admin', 'manager', 'accountant'].includes(user.role);
+  const canModify = user?.role === 'admin' || user?.role === 'manager';
 
   // Fetch suppliers
-  const { data: suppliers = [], isLoading, error } = useQuery({
+  const { data: suppliers = [], isLoading, error } = useQuery<Supplier[], Error>({
     queryKey: ['suppliers'],
-    queryFn: async (): Promise<Supplier[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
-
-  // Fetch debts for selected supplier
-  const { data: debts = [] } = useQuery({
-    queryKey: ['debts', selectedSupplier?.id],
-    queryFn: async (): Promise<Debt[]> => {
-      if (!selectedSupplier) return [];
-      const { data, error } = await supabase
-        .from('debts')
-        .select('*')
-        .eq('supplier_id', selectedSupplier.id)
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!selectedSupplier,
-  });
-
-  // Fetch transactions (payments) for selected supplier
-  const { data: transactions = [] } = useQuery({
-    queryKey: ['transactions', selectedSupplier?.id],
-    queryFn: async (): Promise<Transaction[]> => {
-      if (!selectedSupplier) return [];
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('supplier_id', selectedSupplier.id)
-        .eq('type', 'expense')
-        .order('date', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!selectedSupplier,
-  });
-
-  // Fetch accounts
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: async (): Promise<Account[]> => {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*');
+      
       if (error) throw new Error(error.message);
       return data;
     },
@@ -147,12 +82,19 @@ const Suppliers: React.FC = () => {
         .insert([supplier])
         .select()
         .single();
+      
       if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      setNewSupplier({ name: '', email: '', phone: '', address: '', status: 'active' });
+      setNewSupplier({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        status: 'active',
+      });
       setIsAddSupplierOpen(false);
       toast({
         title: 'Pemasok berhasil ditambahkan',
@@ -183,6 +125,7 @@ const Suppliers: React.FC = () => {
         .eq('id', supplier.id)
         .select()
         .single();
+      
       if (error) throw new Error(error.message);
       return data;
     },
@@ -210,6 +153,7 @@ const Suppliers: React.FC = () => {
         .from('suppliers')
         .delete()
         .eq('id', supplierId);
+      
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -222,69 +166,6 @@ const Suppliers: React.FC = () => {
     onError: (error: Error) => {
       toast({
         title: 'Gagal menghapus pemasok',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Add debt mutation
-  const addDebtMutation = useMutation({
-    mutationFn: async (debt: Database['public']['Tables']['debts']['Insert']) => {
-      const { data, error } = await supabase
-        .from('debts')
-        .insert([debt])
-        .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['debts', selectedSupplier?.id] });
-      setNewDebt({
-        amount: '',
-        description: '',
-        due_date: '',
-        invoice_number: `INV-SUPP-${uuidv4().slice(0, 8)}`,
-      });
-      setIsAddDebtOpen(false);
-      toast({
-        title: 'Utang berhasil ditambahkan',
-        description: `Utang untuk ${selectedSupplier?.name} telah ditambahkan`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal menambahkan utang',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Add payment mutation
-  const addPaymentMutation = useMutation({
-    mutationFn: async (transaction: Database['public']['Tables']['transactions']['Insert']) => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert([transaction])
-        .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions', selectedSupplier?.id] });
-      setNewPayment({ amount: '', description: '', date: '' });
-      setIsAddPaymentOpen(false);
-      toast({
-        title: 'Pembayaran berhasil ditambahkan',
-        description: `Pembayaran untuk ${selectedSupplier?.name} telah ditambahkan`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal menambahkan pembayaran',
         description: error.message,
         variant: 'destructive',
       });
@@ -306,6 +187,7 @@ const Suppliers: React.FC = () => {
       });
       return;
     }
+
     addSupplierMutation.mutate(newSupplier);
   };
 
@@ -318,52 +200,12 @@ const Suppliers: React.FC = () => {
     if (!canModify) {
       toast({
         title: 'Aksi tidak diizinkan',
-        description: 'Hanya admin, manajer, atau akuntan yang dapat menghapus pemasok',
+        description: 'Hanya admin atau manajer yang dapat menghapus pemasok',
         variant: 'destructive',
       });
       return;
     }
     deleteSupplierMutation.mutate(supplierId);
-  };
-
-  const handleAddDebt = () => {
-    if (!selectedSupplier || !newDebt.amount || !newDebt.due_date) {
-      toast({
-        title: 'Data tidak lengkap',
-        description: 'Mohon lengkapi jumlah dan tanggal jatuh tempo',
-        variant: 'destructive',
-      });
-      return;
-    }
-    addDebtMutation.mutate({
-      supplier_id: selectedSupplier.id,
-      amount: parseFloat(newDebt.amount),
-      description: newDebt.description || 'Invoice',
-      due_date: newDebt.due_date,
-      invoice_number: newDebt.invoice_number,
-      is_paid: false,
-      created_by: user?.id,
-    });
-  };
-
-  const handleAddPayment = () => {
-    if (!selectedSupplier || !newPayment.amount || !newPayment.date || accounts.length === 0) {
-      toast({
-        title: 'Data tidak lengkap',
-        description: 'Mohon lengkapi jumlah, tanggal, dan pastikan akun tersedia',
-        variant: 'destructive',
-      });
-      return;
-    }
-    addPaymentMutation.mutate({
-      account_id: accounts[0].id,
-      supplier_id: selectedSupplier.id,
-      amount: parseFloat(newPayment.amount),
-      description: newPayment.description || 'Pembayaran ke pemasok',
-      date: newPayment.date,
-      type: 'expense',
-      created_by: user?.id,
-    });
   };
 
   if (error) {
@@ -379,7 +221,9 @@ const Suppliers: React.FC = () => {
       <div className="pb-4 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Pemasok</h1>
-          <p className="text-muted-foreground">Kelola data pemasok perusahaan</p>
+          <p className="text-muted-foreground">
+            Kelola data pemasok perusahaan
+          </p>
         </div>
         <Dialog open={isAddSupplierOpen} onOpenChange={setIsAddSupplierOpen}>
           <DialogTrigger asChild>
@@ -391,43 +235,61 @@ const Suppliers: React.FC = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Tambah Pemasok Baru</DialogTitle>
-              <DialogDescription>Masukkan informasi pemasok baru.</DialogDescription>
+              <DialogDescription>
+                Masukkan informasi pemasok baru.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">Nama Pemasok</label>
+                <label htmlFor="name" className="text-sm font-medium">
+                  Nama Pemasok
+                </label>
                 <Input
                   id="name"
                   value={newSupplier.name}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                  onChange={(e) =>
+                    setNewSupplier({ ...newSupplier, name: e.target.value })
+                  }
                   placeholder="Nama pemasok atau perusahaan"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <label htmlFor="email" className="text-sm font-medium">
+                  Email
+                </label>
                 <Input
                   id="email"
                   type="email"
                   value={newSupplier.email}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                  onChange={(e) =>
+                    setNewSupplier({ ...newSupplier, email: e.target.value })
+                  }
                   placeholder="email@example.com"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-medium">Nomor Telepon</label>
+                <label htmlFor="phone" className="text-sm font-medium">
+                  Nomor Telepon
+                </label>
                 <Input
                   id="phone"
                   value={newSupplier.phone}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                  onChange={(e) =>
+                    setNewSupplier({ ...newSupplier, phone: e.target.value })
+                  }
                   placeholder="081234567890"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="address" className="text-sm font-medium">Alamat</label>
+                <label htmlFor="address" className="text-sm font-medium">
+                  Alamat
+                </label>
                 <Input
                   id="address"
                   value={newSupplier.address}
-                  onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
+                  onChange={(e) =>
+                    setNewSupplier({ ...newSupplier, address: e.target.value })
+                  }
                   placeholder="Alamat pemasok"
                 />
               </div>
@@ -485,7 +347,10 @@ const Suppliers: React.FC = () => {
               <TableBody>
                 {filteredSuppliers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-muted-foreground"
+                    >
                       Tidak ada pemasok yang ditemukan
                     </TableCell>
                   </TableRow>
@@ -516,15 +381,6 @@ const Suppliers: React.FC = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedSupplier(supplier);
-                                setIsViewDetailsOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Lihat Detail
-                            </DropdownMenuItem>
                             {canModify && (
                               <DropdownMenuItem
                                 onClick={() => {
@@ -557,53 +413,74 @@ const Suppliers: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Supplier Dialog */}
       <Dialog open={isEditSupplierOpen} onOpenChange={setIsEditSupplierOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Pemasok</DialogTitle>
-            <DialogDescription>Perbarui informasi pemasok.</DialogDescription>
+            <DialogDescription>
+              Perbarui informasi pemasok.
+            </DialogDescription>
           </DialogHeader>
           {selectedSupplier && (
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <label htmlFor="edit-name" className="text-sm font-medium">Nama Pemasok</label>
+                <label htmlFor="edit-name" className="text-sm font-medium">
+                  Nama Pemasok
+                </label>
                 <Input
                   id="edit-name"
                   value={selectedSupplier.name}
                   onChange={(e) =>
-                    setSelectedSupplier({ ...selectedSupplier, name: e.target.value })
+                    setSelectedSupplier({
+                      ...selectedSupplier,
+                      name: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="edit-email" className="text-sm font-medium">Email</label>
+                <label htmlFor="edit-email" className="text-sm font-medium">
+                  Email
+                </label>
                 <Input
                   id="edit-email"
                   type="email"
                   value={selectedSupplier.email}
                   onChange={(e) =>
-                    setSelectedSupplier({ ...selectedSupplier, email: e.target.value })
+                    setSelectedSupplier({
+                      ...selectedSupplier,
+                      email: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="edit-phone" className="text-sm font-medium">Nomor Telepon</label>
+                <label htmlFor="edit-phone" className="text-sm font-medium">
+                  Nomor Telepon
+                </label>
                 <Input
                   id="edit-phone"
                   value={selectedSupplier.phone}
                   onChange={(e) =>
-                    setSelectedSupplier({ ...selectedSupplier, phone: e.target.value })
+                    setSelectedSupplier({
+                      ...selectedSupplier,
+                      phone: e.target.value,
+                    })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="edit-address" className="text-sm font-medium">Alamat</label>
+                <label htmlFor="edit-address" className="text-sm font-medium">
+                  Alamat
+                </label>
                 <Input
                   id="edit-address"
                   value={selectedSupplier.address || ''}
                   onChange={(e) =>
-                    setSelectedSupplier({ ...selectedSupplier, address: e.target.value })
+                    setSelectedSupplier({
+                      ...selectedSupplier,
+                      address: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -622,235 +499,6 @@ const Suppliers: React.FC = () => {
               disabled={updateSupplierMutation.isPending || !canModify}
             >
               {updateSupplierMutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Details Dialog */}
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Detail Pemasok: {selectedSupplier?.name}</DialogTitle>
-            <DialogDescription>Lihat pembayaran dan utang pemasok.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Pembayaran (Pengeluaran)</CardTitle>
-                  {canModify && (
-                    <Button
-                      onClick={() => setIsAddPaymentOpen(true)}
-                      disabled={accounts.length === 0 || addPaymentMutation.isPending}
-                    >
-                      Tambah Pembayaran
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead>Jumlah</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-4">
-                          Tidak ada pembayaran ditemukan
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      transactions.map((txn) => (
-                        <TableRow key={txn.id}>
-                          <TableCell>{format(new Date(txn.date), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>{txn.description}</TableCell>
-                          <TableCell>Rp {txn.amount.toLocaleString('id-ID')}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Utang</CardTitle>
-                  {canModify && (
-                    <Button
-                      onClick={() => setIsAddDebtOpen(true)}
-                      disabled={addDebtMutation.isPending}
-                    >
-                      Tambah Utang
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nomor Invoice</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead>Jumlah</TableHead>
-                      <TableHead>Jatuh Tempo</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {debts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan= {5} className="text-center py-4">
-                          Tidak ada utang ditemukan
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      debts.map((debt) => (
-                        <TableRow key={debt.id}>
-                          <TableCell>{debt.invoice_number}</TableCell>
-                          <TableCell>{debt.description}</TableCell>
-                          <TableCell>Rp {debt.amount.toLocaleString('id-ID')}</TableCell>
-                          <TableCell>{format(new Date(debt.due_date), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>{debt.is_paid ? 'Lunas' : 'Belum Lunas'}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewDetailsOpen(false)}
-            >
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Debt Dialog */}
-      <Dialog open={isAddDebtOpen} onOpenChange={setIsAddDebtOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Utang</DialogTitle>
-            <DialogDescription>Tambahkan utang baru untuk {selectedSupplier?.name}.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">Jumlah</label>
-              <Input
-                id="amount"
-                type="number"
-                value={newDebt.amount}
-                onChange={(e) => setNewDebt({ ...newDebt, amount: e.target.value })}
-                placeholder="5000000"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">Deskripsi</label>
-              <Input
-                id="description"
-                value={newDebt.description}
-                onChange={(e) => setNewDebt({ ...newDebt, description: e.target.value })}
-                placeholder="Invoice untuk pembelian"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="due_date" className="text-sm font-medium">Jatuh Tempo</label>
-              <Input
-                id="due_date"
-                type="date"
-                value={newDebt.due_date}
-                onChange={(e) => setNewDebt({ ...newDebt, due_date: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="invoice_number" className="text-sm font-medium">Nomor Invoice</label>
-              <Input
-                id="invoice_number"
-                value={newDebt.invoice_number}
-                onChange={(e) => setNewDebt({ ...newDebt, invoice_number: e.target.value })}
-                placeholder="INV-SUPP-XXXX"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddDebtOpen(false)}
-              disabled={addDebtMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleAddDebt}
-              disabled={addDebtMutation.isPending}
-            >
-              {addDebtMutation.isPending ? 'Menambahkan...' : 'Tambah Utang'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Payment Dialog */}
-      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Pembayaran</DialogTitle>
-            <DialogDescription>Tambahkan pembayaran baru untuk {selectedSupplier?.name}.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">Jumlah</label>
-              <Input
-                id="amount"
-                type="number"
-                value={newPayment.amount}
-                onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
-                placeholder="2000000"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">Deskripsi</label>
-              <Input
-                id="description"
-                value={newPayment.description}
-                onChange={(e) => setNewPayment({ ...newPayment, description: e.target.value })}
-                placeholder="Pembayaran untuk invoice"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="date" className="text-sm font-medium">Tanggal</label>
-              <Input
-                id="date"
-                type="date"
-                value={newPayment.date}
-                onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddPaymentOpen(false)}
-              disabled={addPaymentMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleAddPayment}
-              disabled={addPaymentMutation.isPending || accounts.length === 0}
-            >
-              {addPaymentMutation.isPending ? 'Menambahkan...' : 'Tambah Pembayaran'}
             </Button>
           </DialogFooter>
         </DialogContent>
