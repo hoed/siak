@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import {
   BarChart2,
+  BookOpen,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   FileText,
   Home,
   Layers,
+  Package,
   PieChart,
   Settings,
   TrendingDown,
@@ -27,6 +29,8 @@ const navigationItems = [
   { name: 'Pendapatan', path: '/income', icon: TrendingUp, role: ['user', 'admin', 'manager', 'accountant'] },
   { name: 'Pengeluaran', path: '/expenses', icon: TrendingDown, role: ['user', 'admin', 'manager', 'accountant'] },
   { name: 'Transaksi', path: '/transactions', icon: FileText, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Jurnal', path: '/journals', icon: BookOpen, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Inventaris', path: '/inventory', icon: Package, role: ['admin', 'manager', 'accountant'] },
   { name: 'Utang', path: '/debts', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
   { name: 'Piutang', path: '/receivables', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
   { name: 'Akun', path: '/accounts', icon: Layers, role: ['admin', 'manager', 'accountant'] },
@@ -57,7 +61,8 @@ const Sidebar: React.FC = () => {
   return (
     <div
       className={sidebarClasses}
-      style={{ backgroundColor: '#3399FF', color: '#FFFFFF' }} // Fallback blue background and white text
+      data-sidebar="true"
+      style={{ backgroundColor: '#3399FF !important', color: '#FFFFFF !important' }}
     >
       <div className="flex items-center justify-between p-4">
         {isOpen && <span className="text-lg font-semibold text-sidebar-foreground">SisKeu</span>}
