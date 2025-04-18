@@ -37,7 +37,6 @@ import { Search, Package, MoreHorizontal, Edit, Trash2, Plus, Truck, Users, Shop
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   getInventoryItems, 
   createInventoryItem,
@@ -47,7 +46,6 @@ import {
   createInventoryTransaction
 } from '@/services/inventoryService';
 import { InventoryItem, InventoryTransaction } from '@/types/inventory';
-import { useToast } from '@/hooks/use-toast';
 
 const Inventory: React.FC = () => {
   const { toast } = useToast();
@@ -85,7 +83,6 @@ const Inventory: React.FC = () => {
 
   const canModify = user?.role === 'admin' || user?.role === 'manager';
 
-  // Fetch inventory items
   const { 
     data: inventoryItems = [], 
     isLoading: itemsLoading, 
@@ -95,7 +92,6 @@ const Inventory: React.FC = () => {
     queryFn: getInventoryItems,
   });
 
-  // Fetch inventory transactions
   const { 
     data: inventoryTransactions = [], 
     isLoading: transactionsLoading, 
@@ -105,7 +101,6 @@ const Inventory: React.FC = () => {
     queryFn: getInventoryTransactions,
   });
 
-  // Add inventory item mutation
   const addItemMutation = useMutation({
     mutationFn: createInventoryItem,
     onSuccess: () => {
@@ -136,7 +131,6 @@ const Inventory: React.FC = () => {
     },
   });
 
-  // Update inventory item mutation
   const updateItemMutation = useMutation({
     mutationFn: updateInventoryItem,
     onSuccess: () => {
@@ -156,7 +150,6 @@ const Inventory: React.FC = () => {
     },
   });
 
-  // Delete inventory item mutation
   const deleteItemMutation = useMutation({
     mutationFn: deleteInventoryItem,
     onSuccess: () => {
@@ -175,7 +168,6 @@ const Inventory: React.FC = () => {
     },
   });
 
-  // Add inventory transaction mutation
   const addTransactionMutation = useMutation({
     mutationFn: createInventoryTransaction,
     onSuccess: () => {
@@ -259,7 +251,6 @@ const Inventory: React.FC = () => {
       return;
     }
 
-    // Calculate total price if not set
     if (newTransaction.totalPrice <= 0) {
       newTransaction.totalPrice = newTransaction.quantity * newTransaction.unitPrice;
     }

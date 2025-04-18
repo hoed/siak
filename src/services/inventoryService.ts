@@ -1,11 +1,13 @@
-import { supabase } from '@/integrations/supabase/client';
+
+import { inventoryClient } from '@/integrations/supabase/inventory-client';
 import { InventoryItem, InventoryTransaction } from '@/types/inventory';
 import { toast } from 'sonner';
 
 // ============= Inventory API =============
 export const getInventoryItems = async (): Promise<InventoryItem[]> => {
   try {
-    const { data, error } = await supabase
+    // Using the custom client with proper types
+    const { data, error } = await inventoryClient
       .from('inventory_items')
       .select('*');
       
@@ -13,7 +15,7 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
     
     if (!data) return [];
     
-    return data.map((item: any) => ({
+    return data.map((item) => ({
       id: item.id,
       name: item.name,
       sku: item.sku,
@@ -38,7 +40,7 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
 
 export const createInventoryItem = async (item: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<InventoryItem | null> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await inventoryClient
       .from('inventory_items')
       .insert([{
         name: item.name,
@@ -86,7 +88,7 @@ export const createInventoryItem = async (item: Omit<InventoryItem, 'id' | 'crea
 
 export const updateInventoryItem = async (item: InventoryItem): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await inventoryClient
       .from('inventory_items')
       .update({
         name: item.name,
@@ -115,7 +117,7 @@ export const updateInventoryItem = async (item: InventoryItem): Promise<boolean>
 
 export const deleteInventoryItem = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await inventoryClient
       .from('inventory_items')
       .delete()
       .eq('id', id);
@@ -132,7 +134,7 @@ export const deleteInventoryItem = async (id: string): Promise<boolean> => {
 // ============= Inventory Transactions API =============
 export const getInventoryTransactions = async (): Promise<InventoryTransaction[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await inventoryClient
       .from('inventory_transactions')
       .select('*');
       
@@ -140,10 +142,10 @@ export const getInventoryTransactions = async (): Promise<InventoryTransaction[]
     
     if (!data) return [];
     
-    return data.map((transaction: any) => ({
+    return data.map((transaction) => ({
       id: transaction.id,
       itemId: transaction.item_id,
-      type: transaction.type,
+      type: transaction.type as 'purchase' | 'sale' | 'adjustment' | 'return',
       quantity: transaction.quantity,
       unitPrice: transaction.unit_price,
       totalPrice: transaction.total_price,
@@ -163,7 +165,7 @@ export const getInventoryTransactions = async (): Promise<InventoryTransaction[]
 
 export const createInventoryTransaction = async (transaction: Omit<InventoryTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<InventoryTransaction | null> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await inventoryClient
       .from('inventory_transactions')
       .insert([{
         item_id: transaction.itemId,
@@ -187,7 +189,7 @@ export const createInventoryTransaction = async (transaction: Omit<InventoryTran
     return {
       id: data.id,
       itemId: data.item_id,
-      type: data.type,
+      type: data.type as 'purchase' | 'sale' | 'adjustment' | 'return',
       quantity: data.quantity,
       unitPrice: data.unit_price,
       totalPrice: data.total_price,
@@ -207,27 +209,74 @@ export const createInventoryTransaction = async (transaction: Omit<InventoryTran
 
 export const getInventorySummary = async () => {
   try {
-    const { data: summaryData, error: summaryError } = await supabase
-      .from('inventory_summary')
-      .select('*')
-      .single();
+    // Get total items count
+    const { count: totalItems, error: countError } = await inventoryClient
+      .from('inventory_items')
+      .select('*', { count: 'exact', head: true });
       
-    if (summaryError) throw summaryError;
+    if (countError) throw countError;
     
-    if (!summaryData) {
-      return {
-        totalItems: 0,
-        totalValue: 0,
-        lowStockItems: [],
-        recentTransactions: []
-      };
-    }
+    // Get total inventory value
+    const { data: itemsData, error: itemsError } = await inventoryClient
+      .from('inventory_items')
+      .select('quantity, unit_price');
+      
+    if (itemsError) throw itemsError;
+    
+    const totalValue = itemsData ? itemsData.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0) : 0;
+    
+    // Get low stock items
+    const { data: lowStockItems, error: lowStockError } = await inventoryClient
+      .from('inventory_items')
+      .select('*')
+      .lt('quantity', 'minimum_stock');
+      
+    if (lowStockError) throw lowStockError;
+    
+    // Get recent transactions
+    const { data: recentTransactions, error: transactionsError } = await inventoryClient
+      .from('inventory_transactions')
+      .select(`
+        *,
+        inventory_items(id, name, sku)
+      `)
+      .order('date', { ascending: false })
+      .limit(5);
+      
+    if (transactionsError) throw transactionsError;
     
     return {
-      totalItems: summaryData.total_items || 0,
-      totalValue: summaryData.total_value || 0,
-      lowStockItems: summaryData.low_stock_items || [],
-      recentTransactions: summaryData.recent_transactions || []
+      totalItems: totalItems || 0,
+      totalValue: totalValue,
+      lowStockItems: lowStockItems ? lowStockItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        sku: item.sku,
+        description: item.description,
+        category: item.category,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        costPrice: item.cost_price,
+        supplier_id: item.supplier_id,
+        minimumStock: item.minimum_stock,
+        location: item.location,
+        imageUrl: item.image_url,
+        barcode: item.barcode,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      })) : [],
+      recentTransactions: recentTransactions ? recentTransactions.map(transaction => ({
+        id: transaction.id,
+        itemId: transaction.item_id,
+        itemName: transaction.inventory_items?.name || '',
+        itemSku: transaction.inventory_items?.sku || '',
+        type: transaction.type as 'purchase' | 'sale' | 'adjustment' | 'return',
+        quantity: transaction.quantity,
+        unitPrice: transaction.unit_price,
+        totalPrice: transaction.total_price,
+        date: transaction.date,
+        reference: transaction.reference
+      })) : []
     };
   } catch (error: any) {
     toast.error(`Error fetching inventory summary: ${error.message}`);

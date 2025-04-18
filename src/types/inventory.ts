@@ -37,9 +37,16 @@ export interface InventorySummary {
   totalItems: number;
   totalValue: number;
   lowStockItems: InventoryItem[];
-  topSellingItems: {
-    item: InventoryItem;
-    soldQuantity: number;
+  recentTransactions: {
+    id: string;
+    itemId: string;
+    itemName?: string;
+    itemSku?: string;
+    type: 'purchase' | 'sale' | 'adjustment' | 'return';
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    date: string;
+    reference?: string;
   }[];
-  recentTransactions: InventoryTransaction[];
 }
