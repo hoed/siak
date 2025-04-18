@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -48,6 +47,7 @@ import {
   createInventoryTransaction
 } from '@/services/inventoryService';
 import { InventoryItem, InventoryTransaction } from '@/types/inventory';
+import { useToast } from '@/hooks/use-toast';
 
 const Inventory: React.FC = () => {
   const { toast } = useToast();

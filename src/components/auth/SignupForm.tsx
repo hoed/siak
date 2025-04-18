@@ -12,19 +12,19 @@ export const SignupForm: React.FC = () => {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupLoading, setSignupLoading] = useState(false);
-  const { signup } = useAuth();
+  const { login } = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupLoading(true);
 
     try {
-      await signup(signupEmail, signupPassword, signupName);
+      // Since signup has been removed, we'll show a message
+      toast.info('Pendaftaran tidak tersedia. Silakan hubungi administrator untuk akun baru.');
       // Reset form
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
-      toast.success('Pendaftaran berhasil! Silahkan periksa email Anda untuk konfirmasi akun.');
     } catch (error: any) {
       console.error('Signup error:', error);
       toast.error(`Pendaftaran gagal: ${error.message || 'Terjadi kesalahan'}`);

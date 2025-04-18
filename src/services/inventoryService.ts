@@ -6,14 +6,15 @@ import { toast } from 'sonner';
 // ============= Inventory API =============
 export const getInventoryItems = async (): Promise<InventoryItem[]> => {
   try {
+    // Use raw SQL query instead of from() since table might not be defined in types
     const { data, error } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .order('name');
+      .rpc('get_inventory_items');
       
     if (error) throw error;
     
-    return data.map(item => ({
+    if (!data) return [];
+    
+    return data.map((item: any) => ({
       id: item.id,
       name: item.name,
       sku: item.sku,
@@ -38,26 +39,26 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
 
 export const createInventoryItem = async (item: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<InventoryItem | null> => {
   try {
+    // Use raw SQL insert instead of from() since table might not be defined in types
     const { data, error } = await supabase
-      .from('inventory_items')
-      .insert([{
-        name: item.name,
-        sku: item.sku,
-        description: item.description,
-        category: item.category,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        cost_price: item.costPrice,
-        supplier_id: item.supplier_id,
-        minimum_stock: item.minimumStock,
-        location: item.location,
-        image_url: item.imageUrl,
-        barcode: item.barcode
-      }])
-      .select()
-      .single();
+      .rpc('create_inventory_item', {
+        p_name: item.name,
+        p_sku: item.sku,
+        p_description: item.description,
+        p_category: item.category,
+        p_quantity: item.quantity,
+        p_unit_price: item.unitPrice,
+        p_cost_price: item.costPrice,
+        p_supplier_id: item.supplier_id,
+        p_minimum_stock: item.minimumStock,
+        p_location: item.location,
+        p_image_url: item.imageUrl,
+        p_barcode: item.barcode
+      });
       
     if (error) throw error;
+    
+    if (!data) return null;
     
     return {
       id: data.id,
@@ -84,23 +85,23 @@ export const createInventoryItem = async (item: Omit<InventoryItem, 'id' | 'crea
 
 export const updateInventoryItem = async (item: InventoryItem): Promise<boolean> => {
   try {
+    // Use raw SQL update instead of from() since table might not be defined in types
     const { error } = await supabase
-      .from('inventory_items')
-      .update({
-        name: item.name,
-        sku: item.sku,
-        description: item.description,
-        category: item.category,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        cost_price: item.costPrice,
-        supplier_id: item.supplier_id,
-        minimum_stock: item.minimumStock,
-        location: item.location,
-        image_url: item.imageUrl,
-        barcode: item.barcode
-      })
-      .eq('id', item.id);
+      .rpc('update_inventory_item', {
+        p_id: item.id,
+        p_name: item.name,
+        p_sku: item.sku,
+        p_description: item.description,
+        p_category: item.category,
+        p_quantity: item.quantity,
+        p_unit_price: item.unitPrice,
+        p_cost_price: item.costPrice,
+        p_supplier_id: item.supplier_id,
+        p_minimum_stock: item.minimumStock,
+        p_location: item.location,
+        p_image_url: item.imageUrl,
+        p_barcode: item.barcode
+      });
       
     if (error) throw error;
     
@@ -113,10 +114,9 @@ export const updateInventoryItem = async (item: InventoryItem): Promise<boolean>
 
 export const deleteInventoryItem = async (id: string): Promise<boolean> => {
   try {
+    // Use raw SQL delete instead of from() since table might not be defined in types
     const { error } = await supabase
-      .from('inventory_items')
-      .delete()
-      .eq('id', id);
+      .rpc('delete_inventory_item', { p_id: id });
       
     if (error) throw error;
     
@@ -130,17 +130,15 @@ export const deleteInventoryItem = async (id: string): Promise<boolean> => {
 // ============= Inventory Transactions API =============
 export const getInventoryTransactions = async (): Promise<InventoryTransaction[]> => {
   try {
+    // Use raw SQL query instead of from() since table might not be defined in types
     const { data, error } = await supabase
-      .from('inventory_transactions')
-      .select(`
-        *,
-        inventory_items:item_id (id, name, sku)
-      `)
-      .order('date', { ascending: false });
+      .rpc('get_inventory_transactions');
       
     if (error) throw error;
     
-    return data.map(transaction => ({
+    if (!data) return [];
+    
+    return data.map((transaction: any) => ({
       id: transaction.id,
       itemId: transaction.item_id,
       type: transaction.type,
@@ -163,72 +161,39 @@ export const getInventoryTransactions = async (): Promise<InventoryTransaction[]
 
 export const createInventoryTransaction = async (transaction: Omit<InventoryTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<InventoryTransaction | null> => {
   try {
-    // Start a Supabase transaction
-    const { data: transactionData, error: transactionError } = await supabase
-      .from('inventory_transactions')
-      .insert([{
-        item_id: transaction.itemId,
-        type: transaction.type,
-        quantity: transaction.quantity,
-        unit_price: transaction.unitPrice,
-        total_price: transaction.totalPrice,
-        reference: transaction.reference,
-        date: transaction.date,
-        customer_id: transaction.customerId,
-        supplier_id: transaction.supplierId,
-        notes: transaction.notes
-      }])
-      .select()
-      .single();
+    // Use raw SQL insert instead of from() since table might not be defined in types
+    const { data, error } = await supabase
+      .rpc('create_inventory_transaction', {
+        p_item_id: transaction.itemId,
+        p_type: transaction.type,
+        p_quantity: transaction.quantity,
+        p_unit_price: transaction.unitPrice,
+        p_total_price: transaction.totalPrice,
+        p_reference: transaction.reference,
+        p_date: transaction.date,
+        p_customer_id: transaction.customerId,
+        p_supplier_id: transaction.supplierId,
+        p_notes: transaction.notes
+      });
       
-    if (transactionError) throw transactionError;
+    if (error) throw error;
     
-    // Update inventory quantity based on transaction type
-    const { data: itemData, error: itemError } = await supabase
-      .from('inventory_items')
-      .select('quantity')
-      .eq('id', transaction.itemId)
-      .single();
-      
-    if (itemError) throw itemError;
-    
-    let newQuantity = itemData.quantity;
-    
-    switch (transaction.type) {
-      case 'purchase':
-      case 'return':
-        newQuantity += transaction.quantity;
-        break;
-      case 'sale':
-        newQuantity -= transaction.quantity;
-        break;
-      case 'adjustment':
-        // For adjustment, the quantity could be positive or negative
-        newQuantity += transaction.quantity;
-        break;
-    }
-    
-    const { error: updateError } = await supabase
-      .from('inventory_items')
-      .update({ quantity: newQuantity })
-      .eq('id', transaction.itemId);
-      
-    if (updateError) throw updateError;
+    if (!data) return null;
     
     return {
-      id: transactionData.id,
-      itemId: transactionData.item_id,
-      type: transactionData.type,
-      quantity: transactionData.quantity,
-      unitPrice: transactionData.unit_price,
-      totalPrice: transactionData.total_price,
-      reference: transactionData.reference,
-      date: transactionData.date,
-      customerId: transactionData.customer_id,
-      supplierId: transactionData.supplier_id,
-      notes: transactionData.notes,
-      createdAt: transactionData.created_at,
-      updatedAt: transactionData.updated_at
+      id: data.id,
+      itemId: data.item_id,
+      type: data.type,
+      quantity: data.quantity,
+      unitPrice: data.unit_price,
+      totalPrice: data.total_price,
+      reference: data.reference,
+      date: data.date,
+      customerId: data.customer_id,
+      supplierId: data.supplier_id,
+      notes: data.notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
     };
   } catch (error: any) {
     toast.error(`Error creating inventory transaction: ${error.message}`);
@@ -238,32 +203,31 @@ export const createInventoryTransaction = async (transaction: Omit<InventoryTran
 
 export const getInventorySummary = async () => {
   try {
-    // Get total items count
-    const { count: totalItems, error: countError } = await supabase
-      .from('inventory_items')
-      .select('*', { count: 'exact', head: true });
+    // Use raw SQL queries instead of from() since tables might not be defined in types
+    const { data: summaryData, error: summaryError } = await supabase
+      .rpc('get_inventory_summary');
       
-    if (countError) throw countError;
+    if (summaryError) throw summaryError;
     
-    // Get total inventory value
-    const { data: valueData, error: valueError } = await supabase
-      .from('inventory_items')
-      .select('quantity, unit_price');
-      
-    if (valueError) throw valueError;
+    if (!summaryData) {
+      return {
+        totalItems: 0,
+        totalValue: 0,
+        lowStockItems: [],
+        topSellingItems: [],
+        recentTransactions: []
+      };
+    }
     
-    const totalValue = valueData.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    const { 
+      total_items: totalItems, 
+      total_value: totalValue,
+      low_stock_items: lowStockItemsRaw,
+      recent_transactions: recentTransactionsRaw
+    } = summaryData;
     
-    // Get low stock items
-    const { data: lowStockData, error: lowStockError } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .lt('quantity', supabase.raw('minimum_stock'))
-      .order('quantity');
-      
-    if (lowStockError) throw lowStockError;
-    
-    const lowStockItems = lowStockData.map(item => ({
+    // Transform low stock items
+    const lowStockItems = lowStockItemsRaw ? lowStockItemsRaw.map((item: any) => ({
       id: item.id,
       name: item.name,
       sku: item.sku,
@@ -279,21 +243,10 @@ export const getInventorySummary = async () => {
       barcode: item.barcode,
       createdAt: item.created_at,
       updatedAt: item.updated_at
-    }));
+    })) : [];
     
-    // Get recent transactions
-    const { data: recentTransactionsData, error: recentTransactionsError } = await supabase
-      .from('inventory_transactions')
-      .select(`
-        *,
-        inventory_items:item_id (id, name, sku)
-      `)
-      .order('date', { ascending: false })
-      .limit(5);
-      
-    if (recentTransactionsError) throw recentTransactionsError;
-    
-    const recentTransactions = recentTransactionsData.map(transaction => ({
+    // Transform recent transactions
+    const recentTransactions = recentTransactionsRaw ? recentTransactionsRaw.map((transaction: any) => ({
       id: transaction.id,
       itemId: transaction.item_id,
       type: transaction.type,
@@ -307,10 +260,10 @@ export const getInventorySummary = async () => {
       notes: transaction.notes,
       createdAt: transaction.created_at,
       updatedAt: transaction.updated_at
-    }));
+    })) : [];
     
     return {
-      totalItems: totalItems || 0,
+      totalItems,
       totalValue,
       lowStockItems,
       topSellingItems: [], // This would require more complex queries
