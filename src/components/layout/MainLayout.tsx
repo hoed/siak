@@ -11,10 +11,18 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   // Function to toggle sidebar
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  // Function to toggle collapse state
+  const toggleCollapse = () => {
+    if (!isMobile) {
+      setIsCollapsed(!isCollapsed);
+    }
   };
   
   return (
@@ -22,9 +30,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <div
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 left-0 z-20 w-64 transition-transform duration-300 ease-in-out md:relative md:translate-x-0`}
+        } fixed inset-y-0 left-0 z-20 transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
+          isCollapsed ? 'w-16' : 'w-64'
+        }`}
       >
-        <Sidebar />
+        <Sidebar isCollapsed={isCollapsed} onToggleCollapse={toggleCollapse} />
       </div>
       
       <div className="flex flex-col flex-1 w-full">
@@ -48,3 +58,4 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 };
 
 export default MainLayout;
+
