@@ -1,28 +1,24 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -32,33 +28,40 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Package, MoreHorizontal, Edit, Trash2, Plus, Truck, Users, ShoppingCart } from 'lucide-react';
+import { Search, Trash2, AlertTriangle, ShoppingCart, Plus, Package, FileText, Edit } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/auth/AuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  getInventoryItems, 
-  createInventoryItem,
-  updateInventoryItem,
-  deleteInventoryItem,
-  getInventoryTransactions,
-  createInventoryTransaction
-} from '@/services/inventoryService';
-import { InventoryItem, InventoryTransaction } from '@/types/inventory';
+import { InventoryItem, InventoryTransaction, InventorySummary } from '@/types/inventory';
+import { getInventoryItems, getInventorySummary, createInventoryItem, updateInventoryItem, deleteInventoryItem, createInventoryTransaction } from '@/services/inventoryService';
 
 const Inventory: React.FC = () => {
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('items');
-  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
-  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
-  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-
-  const [newItem, setNewItem] = useState<Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>>({
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [isAddItemOpen, setIsAddItemOpen] = useState<boolean>(false);
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState<boolean>(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  const [itemForm, setItemForm] = useState({
     name: '',
     sku: '',
     description: '',
@@ -66,929 +69,769 @@ const Inventory: React.FC = () => {
     quantity: 0,
     unitPrice: 0,
     costPrice: 0,
-    minimumStock: 5,
+    minimumStock: 0,
     location: '',
+    imageUrl: '',
+    barcode: '',
+    supplier_id: ''
   });
 
-  const [newTransaction, setNewTransaction] = useState<Omit<InventoryTransaction, 'id' | 'createdAt' | 'updatedAt'>>({
+  const [transactionForm, setTransactionForm] = useState({
     itemId: '',
-    type: 'purchase',
-    quantity: 1,
+    type: 'purchase' as const,
+    quantity: 0,
     unitPrice: 0,
     totalPrice: 0,
-    date: new Date().toISOString().split('T')[0],
     reference: '',
-    notes: '',
+    date: new Date().toISOString().split('T')[0],
+    notes: ''
   });
 
-  const canModify = user?.role === 'admin' || user?.role === 'manager';
+  const queryClient = useQueryClient();
 
-  const { 
-    data: inventoryItems = [], 
-    isLoading: itemsLoading, 
-    error: itemsError 
-  } = useQuery({
+  // Fetch inventory items
+  const { data: inventoryItems = [], isLoading: isLoadingItems } = useQuery({
     queryKey: ['inventoryItems'],
-    queryFn: getInventoryItems,
+    queryFn: getInventoryItems
   });
 
-  const { 
-    data: inventoryTransactions = [], 
-    isLoading: transactionsLoading, 
-    error: transactionsError 
-  } = useQuery({
-    queryKey: ['inventoryTransactions'],
-    queryFn: getInventoryTransactions,
+  // Fetch inventory summary
+  const { data: inventorySummary, isLoading: isLoadingSummary } = useQuery({
+    queryKey: ['inventorySummary'],
+    queryFn: getInventorySummary
   });
 
-  const addItemMutation = useMutation({
+  // Filter items by search term and category
+  const filteredItems = inventoryItems.filter(item => {
+    const matchesSearch = 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCategory = !selectedCategory || item.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  // Get unique categories for filter
+  const categories = [...new Set(inventoryItems.map(item => item.category).filter(Boolean))];
+
+  // Create item mutation
+  const createItemMutation = useMutation({
     mutationFn: createInventoryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      setNewItem({
-        name: '',
-        sku: '',
-        description: '',
-        category: '',
-        quantity: 0,
-        unitPrice: 0,
-        costPrice: 0,
-        minimumStock: 5,
-        location: '',
-      });
+      queryClient.invalidateQueries({ queryKey: ['inventorySummary'] });
       setIsAddItemOpen(false);
-      toast({
-        title: 'Item berhasil ditambahkan',
-        description: `Item ${newItem.name} telah ditambahkan ke inventaris`,
-      });
+      resetItemForm();
+      toast.success('Item added successfully');
     },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal menambahkan item',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+    onError: (error: any) => {
+      toast.error(`Error adding item: ${error.message}`);
+    }
   });
 
+  // Update item mutation
   const updateItemMutation = useMutation({
-    mutationFn: updateInventoryItem,
+    mutationFn: (item: InventoryItem) => updateInventoryItem(item.id, item),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      setIsEditItemOpen(false);
-      toast({
-        title: 'Item berhasil diperbarui',
-        description: `Data item ${selectedItem?.name} telah diperbarui`,
-      });
+      queryClient.invalidateQueries({ queryKey: ['inventorySummary'] });
+      setIsAddItemOpen(false);
+      setEditingItem(null);
+      resetItemForm();
+      toast.success('Item updated successfully');
     },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal memperbarui item',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+    onError: (error: any) => {
+      toast.error(`Error updating item: ${error.message}`);
+    }
   });
 
+  // Delete item mutation
   const deleteItemMutation = useMutation({
-    mutationFn: deleteInventoryItem,
+    mutationFn: (id: string) => deleteInventoryItem(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      toast({
-        title: 'Item berhasil dihapus',
-        description: 'Data item telah dihapus dari inventaris',
-      });
+      queryClient.invalidateQueries({ queryKey: ['inventorySummary'] });
+      setIsDeleteConfirmOpen(false);
+      toast.success('Item deleted successfully');
     },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal menghapus item',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+    onError: (error: any) => {
+      toast.error(`Error deleting item: ${error.message}`);
+    }
   });
 
-  const addTransactionMutation = useMutation({
+  // Create transaction mutation
+  const createTransactionMutation = useMutation({
     mutationFn: createInventoryTransaction,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventoryTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      setNewTransaction({
-        itemId: '',
-        type: 'purchase',
-        quantity: 1,
-        unitPrice: 0,
-        totalPrice: 0,
-        date: new Date().toISOString().split('T')[0],
-        reference: '',
-        notes: '',
-      });
+      queryClient.invalidateQueries({ queryKey: ['inventorySummary'] });
       setIsAddTransactionOpen(false);
-      toast({
-        title: 'Transaksi berhasil ditambahkan',
-        description: 'Transaksi inventaris telah dicatat',
-      });
+      resetTransactionForm();
+      toast.success('Transaction recorded successfully');
     },
-    onError: (error: Error) => {
-      toast({
-        title: 'Gagal menambahkan transaksi',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+    onError: (error: any) => {
+      toast.error(`Error recording transaction: ${error.message}`);
+    }
   });
 
-  const filteredItems = inventoryItems.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.category && item.category.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const filteredTransactions = inventoryTransactions.filter(
-    (transaction) =>
-      transaction.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleAddItem = () => {
-    if (!newItem.name || !newItem.sku) {
-      toast({
-        title: 'Data tidak lengkap',
-        description: 'Mohon lengkapi nama dan SKU item',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    addItemMutation.mutate(newItem);
-  };
-
-  const handleEditItem = () => {
-    if (!selectedItem || !canModify) return;
-    updateItemMutation.mutate(selectedItem);
-  };
-
-  const handleDeleteItem = (itemId: string) => {
-    if (!canModify) {
-      toast({
-        title: 'Aksi tidak diizinkan',
-        description: 'Hanya admin atau manajer yang dapat menghapus item',
-        variant: 'destructive',
-      });
-      return;
-    }
-    deleteItemMutation.mutate(itemId);
-  };
-
-  const handleAddTransaction = () => {
-    if (!newTransaction.itemId || newTransaction.quantity <= 0) {
-      toast({
-        title: 'Data tidak lengkap',
-        description: 'Mohon pilih item dan masukkan jumlah yang valid',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newTransaction.totalPrice <= 0) {
-      newTransaction.totalPrice = newTransaction.quantity * newTransaction.unitPrice;
-    }
-
-    addTransactionMutation.mutate(newTransaction);
-  };
-
-  const updateTotalPrice = () => {
-    setNewTransaction({
-      ...newTransaction,
-      totalPrice: newTransaction.quantity * newTransaction.unitPrice
+  const resetItemForm = () => {
+    setItemForm({
+      name: '',
+      sku: '',
+      description: '',
+      category: '',
+      quantity: 0,
+      unitPrice: 0,
+      costPrice: 0,
+      minimumStock: 0,
+      location: '',
+      imageUrl: '',
+      barcode: '',
+      supplier_id: ''
     });
   };
 
-  const getTransactionTypeDisplayName = (type: string) => {
-    switch (type) {
-      case 'purchase': return 'Pembelian';
-      case 'sale': return 'Penjualan';
-      case 'adjustment': return 'Penyesuaian';
-      case 'return': return 'Pengembalian';
-      default: return type;
+  const resetTransactionForm = () => {
+    setTransactionForm({
+      itemId: '',
+      type: 'purchase',
+      quantity: 0,
+      unitPrice: 0,
+      totalPrice: 0,
+      reference: '',
+      date: new Date().toISOString().split('T')[0],
+      notes: ''
+    });
+  };
+
+  const handleItemSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const itemData: Partial<InventoryItem> = {
+      name: itemForm.name,
+      sku: itemForm.sku,
+      description: itemForm.description,
+      category: itemForm.category,
+      quantity: Number(itemForm.quantity),
+      unitPrice: Number(itemForm.unitPrice),
+      costPrice: Number(itemForm.costPrice),
+      minimumStock: Number(itemForm.minimumStock),
+      location: itemForm.location,
+      imageUrl: itemForm.imageUrl,
+      barcode: itemForm.barcode,
+      supplier_id: itemForm.supplier_id || undefined
+    };
+
+    if (editingItem) {
+      updateItemMutation.mutate({ ...editingItem, ...itemData });
+    } else {
+      createItemMutation.mutate(itemData);
     }
   };
 
-  const getTransactionTypeIcon = (type: string) => {
-    switch (type) {
-      case 'purchase': return <Truck className="h-4 w-4 text-blue-500" />;
-      case 'sale': return <ShoppingCart className="h-4 w-4 text-green-500" />;
-      case 'adjustment': return <Edit className="h-4 w-4 text-amber-500" />;
-      case 'return': return <Package className="h-4 w-4 text-red-500" />;
-      default: return <Package className="h-4 w-4" />;
+  const handleTransactionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createTransactionMutation.mutate({
+      itemId: transactionForm.itemId,
+      type: transactionForm.type,
+      quantity: Number(transactionForm.quantity),
+      unitPrice: Number(transactionForm.unitPrice),
+      totalPrice: Number(transactionForm.totalPrice),
+      reference: transactionForm.reference,
+      date: transactionForm.date,
+      notes: transactionForm.notes
+    });
+  };
+
+  const handleEdit = (item: InventoryItem) => {
+    setEditingItem(item);
+    setItemForm({
+      name: item.name,
+      sku: item.sku,
+      description: item.description || '',
+      category: item.category || '',
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      costPrice: item.costPrice,
+      minimumStock: item.minimumStock || 0,
+      location: item.location || '',
+      imageUrl: item.imageUrl || '',
+      barcode: item.barcode || '',
+      supplier_id: item.supplier_id || ''
+    });
+    setIsAddItemOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteId) {
+      deleteItemMutation.mutate(deleteId);
     }
   };
 
-  if (itemsError || transactionsError) {
-    return (
-      <MainLayout>
-        <div className="text-red-500">
-          Error: {(itemsError as Error)?.message || (transactionsError as Error)?.message}
-        </div>
-      </MainLayout>
-    );
-  }
+  const calculateTotalPrice = () => {
+    const quantity = Number(transactionForm.quantity);
+    const unitPrice = Number(transactionForm.unitPrice);
+    const total = quantity * unitPrice;
+    setTransactionForm({
+      ...transactionForm,
+      totalPrice: total
+    });
+  };
+
+  useEffect(() => {
+    calculateTotalPrice();
+  }, [transactionForm.quantity, transactionForm.unitPrice]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
 
   return (
     <MainLayout>
       <div className="pb-4 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Inventaris</h1>
+          <h1 className="text-2xl font-bold">Inventory</h1>
           <p className="text-muted-foreground">
-            Kelola inventaris dan stok barang
+            Manage your stock, track inventory movements and transactions
           </p>
         </div>
-        <div className="flex gap-2">
-          {activeTab === 'items' ? (
-            <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
-              <DialogTrigger asChild>
-                <Button disabled={addItemMutation.isPending || !canModify}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Tambah Item
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Tambah Item Baru</DialogTitle>
-                  <DialogDescription>
-                    Masukkan informasi item inventaris baru.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="name" className="text-sm font-medium">
-                        Nama Item *
-                      </label>
-                      <Input
-                        id="name"
-                        value={newItem.name}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, name: e.target.value })
-                        }
-                        placeholder="Nama item"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="sku" className="text-sm font-medium">
-                        SKU *
-                      </label>
-                      <Input
-                        id="sku"
-                        value={newItem.sku}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, sku: e.target.value })
-                        }
-                        placeholder="SKU-001"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="description" className="text-sm font-medium">
-                      Deskripsi
-                    </label>
-                    <Input
-                      id="description"
-                      value={newItem.description || ''}
-                      onChange={(e) =>
-                        setNewItem({ ...newItem, description: e.target.value })
-                      }
-                      placeholder="Deskripsi item"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="category" className="text-sm font-medium">
-                        Kategori
-                      </label>
-                      <Input
-                        id="category"
-                        value={newItem.category || ''}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, category: e.target.value })
-                        }
-                        placeholder="Kategori"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="location" className="text-sm font-medium">
-                        Lokasi
-                      </label>
-                      <Input
-                        id="location"
-                        value={newItem.location || ''}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, location: e.target.value })
-                        }
-                        placeholder="Lokasi penyimpanan"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="quantity" className="text-sm font-medium">
-                        Jumlah Awal
-                      </label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        value={newItem.quantity}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, quantity: Number(e.target.value) })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="minimumStock" className="text-sm font-medium">
-                        Stok Minimum
-                      </label>
-                      <Input
-                        id="minimumStock"
-                        type="number"
-                        value={newItem.minimumStock || 0}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, minimumStock: Number(e.target.value) })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="costPrice" className="text-sm font-medium">
-                        Harga Modal
-                      </label>
-                      <Input
-                        id="costPrice"
-                        type="number"
-                        value={newItem.costPrice}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, costPrice: Number(e.target.value) })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="unitPrice" className="text-sm font-medium">
-                        Harga Jual
-                      </label>
-                      <Input
-                        id="unitPrice"
-                        type="number"
-                        value={newItem.unitPrice}
-                        onChange={(e) =>
-                          setNewItem({ ...newItem, unitPrice: Number(e.target.value) })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddItemOpen(false)}
-                    disabled={addItemMutation.isPending}
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    onClick={handleAddItem}
-                    disabled={addItemMutation.isPending}
-                  >
-                    {addItemMutation.isPending ? 'Menambahkan...' : 'Tambah Item'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          ) : (
-            <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
-              <DialogTrigger asChild>
-                <Button disabled={addTransactionMutation.isPending || !canModify}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Tambah Transaksi
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Tambah Transaksi Baru</DialogTitle>
-                  <DialogDescription>
-                    Catat transaksi inventaris baru.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <label htmlFor="itemId" className="text-sm font-medium">
-                      Item *
-                    </label>
-                    <select
-                      id="itemId"
-                      className="w-full px-3 py-2 border rounded-md"
-                      value={newTransaction.itemId}
-                      onChange={(e) => {
-                        const selectedItem = inventoryItems.find(item => item.id === e.target.value);
-                        setNewTransaction({ 
-                          ...newTransaction, 
-                          itemId: e.target.value,
-                          unitPrice: selectedItem ? selectedItem.unitPrice : 0
-                        });
-                        setTimeout(() => updateTotalPrice(), 0);
-                      }}
-                    >
-                      <option value="">Pilih Item</option>
-                      {inventoryItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} ({item.sku})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="type" className="text-sm font-medium">
-                      Tipe Transaksi *
-                    </label>
-                    <select
-                      id="type"
-                      className="w-full px-3 py-2 border rounded-md"
-                      value={newTransaction.type}
-                      onChange={(e) => 
-                        setNewTransaction({ 
-                          ...newTransaction, 
-                          type: e.target.value as any
-                        })
-                      }
-                    >
-                      <option value="purchase">Pembelian</option>
-                      <option value="sale">Penjualan</option>
-                      <option value="adjustment">Penyesuaian</option>
-                      <option value="return">Pengembalian</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="quantity" className="text-sm font-medium">
-                        Jumlah *
-                      </label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        value={newTransaction.quantity}
-                        onChange={(e) => {
-                          setNewTransaction({ 
-                            ...newTransaction, 
-                            quantity: Number(e.target.value) 
-                          });
-                          setTimeout(() => updateTotalPrice(), 0);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="unitPrice" className="text-sm font-medium">
-                        Harga Satuan *
-                      </label>
-                      <Input
-                        id="unitPrice"
-                        type="number"
-                        value={newTransaction.unitPrice}
-                        onChange={(e) => {
-                          setNewTransaction({ 
-                            ...newTransaction, 
-                            unitPrice: Number(e.target.value) 
-                          });
-                          setTimeout(() => updateTotalPrice(), 0);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="totalPrice" className="text-sm font-medium">
-                      Total Harga
-                    </label>
-                    <Input
-                      id="totalPrice"
-                      type="number"
-                      value={newTransaction.totalPrice}
-                      onChange={(e) =>
-                        setNewTransaction({ ...newTransaction, totalPrice: Number(e.target.value) })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="date" className="text-sm font-medium">
-                      Tanggal *
-                    </label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={newTransaction.date}
-                      onChange={(e) =>
-                        setNewTransaction({ ...newTransaction, date: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="reference" className="text-sm font-medium">
-                      Referensi
-                    </label>
-                    <Input
-                      id="reference"
-                      value={newTransaction.reference || ''}
-                      onChange={(e) =>
-                        setNewTransaction({ ...newTransaction, reference: e.target.value })
-                      }
-                      placeholder="No. Referensi/Faktur"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="notes" className="text-sm font-medium">
-                      Catatan
-                    </label>
-                    <Input
-                      id="notes"
-                      value={newTransaction.notes || ''}
-                      onChange={(e) =>
-                        setNewTransaction({ ...newTransaction, notes: e.target.value })
-                      }
-                      placeholder="Catatan tambahan"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddTransactionOpen(false)}
-                    disabled={addTransactionMutation.isPending}
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    onClick={handleAddTransaction}
-                    disabled={addTransactionMutation.isPending}
-                  >
-                    {addTransactionMutation.isPending ? 'Menyimpan...' : 'Simpan Transaksi'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+        <div className="space-x-2">
+          <Button variant="outline" onClick={() => setIsAddTransactionOpen(true)}>
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Record Transaction
+          </Button>
+          <Button onClick={() => {
+            resetItemForm();
+            setEditingItem(null);
+            setIsAddItemOpen(true);
+          }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Item
+          </Button>
         </div>
       </div>
 
+      {inventorySummary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{inventorySummary.totalItems}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(inventorySummary.totalValue)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{inventorySummary.lowStockItems.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Recent Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{inventorySummary.recentTransactions.length}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <Tabs 
-              defaultValue="items" 
-              value={activeTab} 
-              onValueChange={setActiveTab}
-              className="w-full"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <TabsList>
-                  <TabsTrigger value="items" className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    <span>Daftar Item</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="transactions" className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>Transaksi</span>
-                  </TabsTrigger>
-                </TabsList>
-                <div className="relative w-full max-w-sm">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder={
-                      activeTab === 'items' 
-                        ? "Cari item inventaris..." 
-                        : "Cari transaksi..."
-                    }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-              </div>
-
-              <TabsContent value="items" className="space-y-4">
-                {itemsLoading ? (
-                  <div className="text-center py-8">Memuat data inventaris...</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nama Item</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead>Kategori</TableHead>
-                        <TableHead>Stok</TableHead>
-                        <TableHead>Harga Modal</TableHead>
-                        <TableHead>Harga Jual</TableHead>
-                        <TableHead>Lokasi</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={8}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            Tidak ada item inventaris yang ditemukan
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>{item.name}</TableCell>
-                            <TableCell>{item.sku}</TableCell>
-                            <TableCell>{item.category || '-'}</TableCell>
-                            <TableCell>
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                  (item.minimumStock && item.quantity <= item.minimumStock)
-                                    ? 'bg-red-50 text-red-700'
-                                    : 'bg-green-50 text-green-700'
-                                }`}
-                              >
-                                {item.quantity}
-                              </span>
-                            </TableCell>
-                            <TableCell>{new Intl.NumberFormat('id-ID').format(item.costPrice)}</TableCell>
-                            <TableCell>{new Intl.NumberFormat('id-ID').format(item.unitPrice)}</TableCell>
-                            <TableCell>{item.location || '-'}</TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                                  {canModify && (
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setSelectedItem(item);
-                                        setIsEditItemOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Edit Item
-                                    </DropdownMenuItem>
-                                  )}
-                                  {canModify && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleDeleteItem(item.id)}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Hapus Item
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </TabsContent>
-
-              <TabsContent value="transactions" className="space-y-4">
-                {transactionsLoading ? (
-                  <div className="text-center py-8">Memuat data transaksi...</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tanggal</TableHead>
-                        <TableHead>Tipe</TableHead>
-                        <TableHead>Item</TableHead>
-                        <TableHead>Jumlah</TableHead>
-                        <TableHead>Harga Satuan</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Referensi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTransactions.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={7}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            Tidak ada transaksi yang ditemukan
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredTransactions.map((transaction) => (
-                          <TableRow key={transaction.id}>
-                            <TableCell>
-                              {new Date(transaction.date).toLocaleDateString('id-ID')}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {getTransactionTypeIcon(transaction.type)}
-                                <span>{getTransactionTypeDisplayName(transaction.type)}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {inventoryItems.find(item => item.id === transaction.itemId)?.name || transaction.itemId}
-                            </TableCell>
-                            <TableCell>{transaction.quantity}</TableCell>
-                            <TableCell>{new Intl.NumberFormat('id-ID').format(transaction.unitPrice)}</TableCell>
-                            <TableCell>{new Intl.NumberFormat('id-ID').format(transaction.totalPrice)}</TableCell>
-                            <TableCell>{transaction.reference || '-'}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </TabsContent>
-            </Tabs>
+          <CardTitle>Inventory Items</CardTitle>
+          <CardDescription>
+            View and manage your inventory items
+          </CardDescription>
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items by name, SKU, or description..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingItems ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10">
+                      Loading inventory items...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10">
+                      No inventory items found. Try a different search or add a new item.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.sku}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.category || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={item.minimumStock && item.quantity <= item.minimumStock ? "text-red-500 font-bold" : ""}>
+                          {item.quantity}
+                        </span>
+                        {item.minimumStock && item.quantity <= item.minimumStock && (
+                          <AlertTriangle className="inline-block ml-2 h-4 w-4 text-red-500" />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.quantity * item.unitPrice)}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-center space-x-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredItems.length} of {inventoryItems.length} items
+          </div>
+        </CardFooter>
       </Card>
 
-      <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
-            <DialogDescription>
-              Perbarui informasi item inventaris.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedItem && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="edit-name" className="text-sm font-medium">
-                    Nama Item
-                  </label>
-                  <Input
-                    id="edit-name"
-                    value={selectedItem.name}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        name: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="edit-sku" className="text-sm font-medium">
-                    SKU
-                  </label>
-                  <Input
-                    id="edit-sku"
-                    value={selectedItem.sku}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        sku: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
+      {inventorySummary && inventorySummary.lowStockItems.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Low Stock Alert</CardTitle>
+            <CardDescription>Items that need to be restocked</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="text-right">Current Quantity</TableHead>
+                    <TableHead className="text-right">Minimum Stock</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inventorySummary.lowStockItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.sku}</TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell className="text-right text-red-500 font-bold">{item.quantity}</TableCell>
+                      <TableCell className="text-right">{item.minimumStock}</TableCell>
+                      <TableCell className="text-center">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setTransactionForm({
+                              ...transactionForm,
+                              itemId: item.id,
+                              type: 'purchase',
+                              unitPrice: item.costPrice
+                            });
+                            setIsAddTransactionOpen(true);
+                          }}
+                        >
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          Restock
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {inventorySummary && inventorySummary.recentTransactions.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+            <CardDescription>Last 5 inventory transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inventorySummary.recentTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{transaction.itemName || transaction.itemId}</TableCell>
+                      <TableCell>
+                        <span className={`uppercase text-xs font-bold rounded-full px-2 py-1 ${
+                          transaction.type === 'purchase' 
+                            ? 'bg-green-100 text-green-800' 
+                            : transaction.type === 'sale' 
+                            ? 'bg-blue-100 text-blue-800'
+                            : transaction.type === 'adjustment'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {transaction.type}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">{transaction.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(transaction.unitPrice)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(transaction.totalPrice)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Sheet open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{editingItem ? 'Edit Inventory Item' : 'Add New Inventory Item'}</SheetTitle>
+            <SheetDescription>
+              {editingItem 
+                ? 'Update the details of an existing inventory item.' 
+                : 'Fill in the details to add a new item to your inventory.'}
+            </SheetDescription>
+          </SheetHeader>
+          <form onSubmit={handleItemSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Item Name *</Label>
+              <Input 
+                id="name" 
+                value={itemForm.name} 
+                onChange={(e) => setItemForm({...itemForm, name: e.target.value})}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sku">SKU *</Label>
+              <Input 
+                id="sku" 
+                value={itemForm.sku} 
+                onChange={(e) => setItemForm({...itemForm, sku: e.target.value})}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description" 
+                value={itemForm.description} 
+                onChange={(e) => setItemForm({...itemForm, description: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Input 
+                id="category" 
+                value={itemForm.category} 
+                onChange={(e) => setItemForm({...itemForm, category: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="edit-description" className="text-sm font-medium">
-                  Deskripsi
-                </label>
-                <Input
-                  id="edit-description"
-                  value={selectedItem.description || ''}
-                  onChange={(e) =>
-                    setSelectedItem({
-                      ...selectedItem,
-                      description: e.target.value,
-                    })
-                  }
+                <Label htmlFor="quantity">Quantity *</Label>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min="0" 
+                  value={itemForm.quantity} 
+                  onChange={(e) => setItemForm({...itemForm, quantity: Number(e.target.value)})}
+                  required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="edit-category" className="text-sm font-medium">
-                    Kategori
-                  </label>
-                  <Input
-                    id="edit-category"
-                    value={selectedItem.category || ''}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        category: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="edit-location" className="text-sm font-medium">
-                    Lokasi
-                  </label>
-                  <Input
-                    id="edit-location"
-                    value={selectedItem.location || ''}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        location: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="edit-quantity" className="text-sm font-medium">
-                    Jumlah
-                  </label>
-                  <Input
-                    id="edit-quantity"
-                    type="number"
-                    value={selectedItem.quantity}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        quantity: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="edit-minimumStock" className="text-sm font-medium">
-                    Stok Minimum
-                  </label>
-                  <Input
-                    id="edit-minimumStock"
-                    type="number"
-                    value={selectedItem.minimumStock || 0}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        minimumStock: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="edit-costPrice" className="text-sm font-medium">
-                    Harga Modal
-                  </label>
-                  <Input
-                    id="edit-costPrice"
-                    type="number"
-                    value={selectedItem.costPrice}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        costPrice: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="edit-unitPrice" className="text-sm font-medium">
-                    Harga Jual
-                  </label>
-                  <Input
-                    id="edit-unitPrice"
-                    type="number"
-                    value={selectedItem.unitPrice}
-                    onChange={(e) =>
-                      setSelectedItem({
-                        ...selectedItem,
-                        unitPrice: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="minimumStock">Minimum Stock</Label>
+                <Input 
+                  id="minimumStock" 
+                  type="number" 
+                  min="0" 
+                  value={itemForm.minimumStock} 
+                  onChange={(e) => setItemForm({...itemForm, minimumStock: Number(e.target.value)})}
+                />
               </div>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">Selling Price *</Label>
+                <Input 
+                  id="unitPrice" 
+                  type="number" 
+                  min="0" 
+                  value={itemForm.unitPrice} 
+                  onChange={(e) => setItemForm({...itemForm, unitPrice: Number(e.target.value)})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="costPrice">Cost Price *</Label>
+                <Input 
+                  id="costPrice" 
+                  type="number" 
+                  min="0" 
+                  value={itemForm.costPrice} 
+                  onChange={(e) => setItemForm({...itemForm, costPrice: Number(e.target.value)})}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Storage Location</Label>
+              <Input 
+                id="location" 
+                value={itemForm.location} 
+                onChange={(e) => setItemForm({...itemForm, location: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="barcode">Barcode</Label>
+              <Input 
+                id="barcode" 
+                value={itemForm.barcode} 
+                onChange={(e) => setItemForm({...itemForm, barcode: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input 
+                id="imageUrl" 
+                value={itemForm.imageUrl} 
+                onChange={(e) => setItemForm({...itemForm, imageUrl: e.target.value})}
+              />
+            </div>
+            <div className="pt-4 flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setEditingItem(null);
+                  resetItemForm();
+                  setIsAddItemOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                {editingItem ? 'Update Item' : 'Add Item'}
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Record Inventory Transaction</SheetTitle>
+            <SheetDescription>
+              Record purchases, sales, adjustments, or returns
+            </SheetDescription>
+          </SheetHeader>
+          <form onSubmit={handleTransactionSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="transaction-type">Transaction Type *</Label>
+              <Select 
+                value={transactionForm.type} 
+                onValueChange={(value) => setTransactionForm({...transactionForm, type: value as any})}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select transaction type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="purchase">Purchase</SelectItem>
+                  <SelectItem value="sale">Sale</SelectItem>
+                  <SelectItem value="adjustment">Adjustment</SelectItem>
+                  <SelectItem value="return">Return</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="item">Item *</Label>
+              <Select 
+                value={transactionForm.itemId} 
+                onValueChange={(value) => setTransactionForm({...transactionForm, itemId: value})}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an item" />
+                </SelectTrigger>
+                <SelectContent>
+                  {inventoryItems.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name} ({item.sku})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity *</Label>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min="1" 
+                  value={transactionForm.quantity} 
+                  onChange={(e) => setTransactionForm({...transactionForm, quantity: Number(e.target.value)})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">Unit Price *</Label>
+                <Input 
+                  id="unitPrice" 
+                  type="number" 
+                  min="0" 
+                  value={transactionForm.unitPrice} 
+                  onChange={(e) => setTransactionForm({...transactionForm, unitPrice: Number(e.target.value)})}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="totalPrice">Total Price</Label>
+              <Input 
+                id="totalPrice" 
+                type="number" 
+                value={transactionForm.totalPrice} 
+                readOnly
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date">Date *</Label>
+              <Input 
+                id="date" 
+                type="date" 
+                value={transactionForm.date} 
+                onChange={(e) => setTransactionForm({...transactionForm, date: e.target.value})}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reference">Reference/Invoice Number</Label>
+              <Input 
+                id="reference" 
+                value={transactionForm.reference} 
+                onChange={(e) => setTransactionForm({...transactionForm, reference: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea 
+                id="notes" 
+                value={transactionForm.notes} 
+                onChange={(e) => setTransactionForm({...transactionForm, notes: e.target.value})}
+              />
+            </div>
+            <div className="pt-4 flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  resetTransactionForm();
+                  setIsAddTransactionOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                Record Transaction
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this inventory item? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditItemOpen(false)}
-              disabled={updateItemMutation.isPending}
-            >
-              Batal
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
             </Button>
-            <Button
-              onClick={handleEditItem}
-              disabled={updateItemMutation.isPending}
-            >
-              {updateItemMutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

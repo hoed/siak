@@ -1,220 +1,180 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
-  LayoutDashboard, 
-  PieChart, 
-  ArrowLeftRight, 
-  Wallet, 
-  ArrowDownCircle, 
-  ArrowUpCircle, 
+  Home, 
+  BarChart3, 
+  CreditCard, 
+  Settings, 
+  Receipt, 
+  ArrowUpRight, 
+  ArrowDownRight, 
   Users, 
-  FileText, 
-  Settings,
-  CreditCard,
-  Calendar,
-  LogOut,
-  BookOpen,
+  UserCircle, 
+  Tags,
+  PackageOpen,
+  PiggyBank,
+  FileText,
   ChevronLeft,
   ChevronRight,
-  User,
-  Truck,
-  Package
+  CircleDollarSign,
+  Layers3,
+  BookOpen
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { useMobile } from '@/hooks/use-mobile';
 
-interface SidebarProps {
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse }) => {
+export default function Sidebar({ className, isOpen = true, onOpenChange }: SidebarProps) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const isMobile = useMobile();
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Update local collapsed state when isOpen prop changes
+  useEffect(() => {
+    if (!isMobile) {
+      setCollapsed(!isOpen);
+    }
+  }, [isOpen, isMobile]);
+
+  const toggleCollapsed = () => {
+    const newCollapsedState = !collapsed;
+    setCollapsed(newCollapsedState);
+    
+    if (onOpenChange) {
+      onOpenChange(!newCollapsedState);
+    }
+  };
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  const menuItems = [
-    { 
-      icon: <LayoutDashboard size={20} />, 
-      name: 'Dashboard', 
-      path: '/dashboard',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <Package size={20} />, 
-      name: 'Inventory', 
-      path: '/inventory',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <BookOpen size={20} />, 
-      name: 'Bagan Akun', 
-      path: '/chart-of-accounts',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <ArrowUpCircle size={20} />, 
-      name: 'Pendapatan', 
-      path: '/income',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <ArrowDownCircle size={20} />, 
-      name: 'Pengeluaran', 
-      path: '/expenses',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <ArrowLeftRight size={20} />, 
-      name: 'Transaksi', 
-      path: '/transactions',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <Calendar size={20} />, 
-      name: 'Hutang', 
-      path: '/debts',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <Calendar size={20} />, 
-      name: 'Piutang', 
-      path: '/receivables',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <CreditCard size={20} />, 
-      name: 'Akun Bank', 
-      path: '/accounts',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <FileText size={20} />, 
-      name: 'Laporan', 
-      path: '/reports',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <PieChart size={20} />, 
-      name: 'Kategori', 
-      path: '/categories',
-      roles: ['admin', 'manager']
-    },
-    { 
-      icon: <Users size={20} />, 
-      name: 'Pengguna', 
-      path: '/users',
-      roles: ['admin']
-    },
-    { 
-      icon: <User size={20} />, 
-      name: 'Pelanggan', 
-      path: '/customers',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <Truck size={20} />, 
-      name: 'Pemasok', 
-      path: '/suppliers',
-      roles: ['admin', 'manager', 'user']
-    },
-    { 
-      icon: <Settings size={20} />, 
-      name: 'Pengaturan', 
-      path: '/settings',
-      roles: ['admin', 'manager', 'user']
-    },
-  ];
+  // Set sidebarWidth based on collapsed state
+  const sidebarWidth = collapsed ? 'w-16' : 'w-64';
+  
+  // Define icon size based on collapsed state
+  const iconSize = collapsed ? 'h-5 w-5' : 'h-4 w-4';
 
-  const filteredMenuItems = menuItems.filter(item => 
-    user && item.roles.includes(user.role)
-  );
+  const renderNavItem = (
+    path: string, 
+    label: string, 
+    icon: React.ReactNode, 
+    isSection: boolean = false
+  ) => {
+    const active = isActive(path);
+    
+    const item = (
+      <Link
+        to={path}
+        className={cn(
+          "flex items-center py-2 px-3 rounded-md text-sm transition-colors",
+          active 
+            ? "bg-accent text-accent-foreground font-medium" 
+            : "hover:bg-accent/50 text-muted-foreground hover:text-foreground",
+          collapsed && "justify-center px-0",
+          isSection && "mt-6"
+        )}
+      >
+        <span className={cn("mr-2", collapsed && "mr-0", iconSize)}>{icon}</span>
+        {!collapsed && <span>{label}</span>}
+      </Link>
+    );
+
+    if (collapsed) {
+      return (
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {item}
+            </TooltipTrigger>
+            <TooltipContent side="right" className="ml-2 bg-secondary">
+              {label}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return item;
+  };
 
   return (
-    <div className={cn(
-      "h-screen bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-300",
-      isCollapsed ? "w-16" : "w-64"
-    )}>
-      <div className="p-4 flex items-center justify-between border-b border-sidebar-border">
-        <div className="flex items-center">
-          <Wallet className="text-primary" size={28} />
-          {!isCollapsed && <h1 className="ml-2 text-xl font-bold">SisKeu</h1>}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleCollapse}
-          className="hidden md:flex"
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </Button>
-      </div>
-
-      {!isCollapsed && (
-        <div className="px-4 py-4 border-b border-sidebar-border">
-          <div className="flex items-center">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={user?.profileImage || ""} alt={user?.name || ""} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {user?.name?.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="ml-3">
-              <p className="text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-sidebar-foreground/70 capitalize">
-                {user?.role === 'admin' ? 'Administrator' : user?.role === 'manager' ? 'Manajer' : 'Pengguna'}
-              </p>
-            </div>
+    <div className={cn("h-screen bg-card border-r", sidebarWidth, "transition-all duration-300 ease-in-out", className)}>
+      <div className="flex flex-col h-full">
+        <div className="p-3">
+          <div className="flex items-center justify-between">
+            {!collapsed && (
+              <Link to="/dashboard" className="flex items-center">
+                <span className="text-xl font-bold">Keuangan</span>
+              </Link>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn("ml-auto", collapsed && "mx-auto")}
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
-      )}
-
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-1 px-2">
-          {filteredMenuItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive(item.path)
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                  isCollapsed && "justify-center px-2"
-                )}
-                title={isCollapsed ? item.name : undefined}
-              >
-                <span>{item.icon}</span>
-                {!isCollapsed && <span className="ml-3">{item.name}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      <div className={cn(
-        "p-4 border-t border-sidebar-border",
-        isCollapsed && "flex justify-center"
-      )}>
-        <button
-          onClick={logout}
-          className={cn(
-            "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent/50 transition-colors w-full",
-            isCollapsed && "justify-center px-2"
-          )}
-          title={isCollapsed ? 'Keluar' : undefined}
-        >
-          <LogOut size={20} />
-          {!isCollapsed && <span className="ml-3">Keluar</span>}
-        </button>
+        
+        <div className="flex-1 px-3 py-2 overflow-y-auto">
+          <nav className="space-y-1">
+            {/* Dashboard */}
+            {renderNavItem("/dashboard", "Dashboard", <Home className={iconSize} />)}
+            
+            {/* Transactions */}
+            {renderNavItem("/transactions", "Transaksi", <CircleDollarSign className={iconSize} />, true)}
+            
+            {/* Income */}
+            {renderNavItem("/income", "Pemasukan", <ArrowUpRight className={iconSize} />)}
+            
+            {/* Expenses */}
+            {renderNavItem("/expenses", "Pengeluaran", <ArrowDownRight className={iconSize} />)}
+            
+            {/* Accounts */}
+            {renderNavItem("/accounts", "Akun Bank", <CreditCard className={iconSize} />, true)}
+            
+            {/* Receivables */}
+            {renderNavItem("/receivables", "Piutang", <Receipt className={iconSize} />)}
+            
+            {/* Debts */}
+            {renderNavItem("/debts", "Hutang", <PiggyBank className={iconSize} />)}
+            
+            {/* Inventory */}
+            {renderNavItem("/inventory", "Inventaris", <PackageOpen className={iconSize} />, true)}
+            
+            {/* Chart of Accounts */}
+            {renderNavItem("/chart-of-accounts", "Bagan Akun", <Layers3 className={iconSize} />)}
+            
+            {/* Journals */}
+            {renderNavItem("/journals", "Jurnal", <BookOpen className={iconSize} />)}
+            
+            {/* Categories */}
+            {renderNavItem("/categories", "Kategori", <Tags className={iconSize} />, true)}
+            
+            {/* Customers */}
+            {renderNavItem("/customers", "Pelanggan", <UserCircle className={iconSize} />)}
+            
+            {/* Suppliers */}
+            {renderNavItem("/suppliers", "Pemasok", <Users className={iconSize} />)}
+            
+            {/* Reports */}
+            {renderNavItem("/reports", "Laporan", <BarChart3 className={iconSize} />, true)}
+            
+            {/* Settings */}
+            {renderNavItem("/settings", "Pengaturan", <Settings className={iconSize} />, true)}
+          </nav>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Sidebar;
+}
