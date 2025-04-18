@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
+import Inventory from "./pages/Inventory";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +102,11 @@ const App = () => (
             <Route path="/suppliers" element={
               <RequireAuth>
                 <Suppliers />
+              </RequireAuth>
+            } />
+            <Route path="/inventory" element={
+              <RequireAuth>
+                <Inventory />
               </RequireAuth>
             } />
             <Route path="/settings" element={

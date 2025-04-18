@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -25,6 +26,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setUser(null);
           setLoading(false);
+          // Redirect to login when logged out
+          if (event === 'SIGNED_OUT') {
+            navigate('/login');
+          }
         }
       }
     );
@@ -43,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -78,35 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         console.error('No profile found for user:', userId);
-        
-        const { data: userData } = await supabase.auth.getUser();
-        const metadata = userData?.user?.user_metadata;
-        
-        if (metadata?.name) {
-          console.log('Creating profile from metadata:', metadata);
-          let role = metadata.role || 'user';
-          
-          if (userData.user.email === 'hudhoed@rumahost.com') {
-            role = 'admin';
-          }
-          
-          await supabase.from('profiles').insert({
-            id: userId,
-            name: metadata.name,
-            email: userData.user.email,
-            role: role
-          });
-          
-          setUser({
-            id: userId,
-            name: metadata.name,
-            email: userData.user.email || '',
-            role: (role as 'admin' | 'manager' | 'user'),
-            profileImage: undefined
-          });
-        } else {
-          toast.error('Profil pengguna tidak ditemukan');
-        }
+        toast.error('Profil pengguna tidak ditemukan');
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -151,67 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role: 'user'
-          }
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.user && !data.session) {
-        toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun.');
-      } else if (data.user && data.session) {
-        let role = 'user';
-        if (email === 'hudhoed@rumahost.com') {
-          role = 'admin';
-        }
-        
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            name: name,
-            email: email,
-            role: role
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          toast.error('Pendaftaran berhasil tetapi gagal membuat profil');
-        } else {
-          toast.success('Pendaftaran berhasil! Anda akan diarahkan ke dashboard.');
-          navigate('/dashboard');
-        }
-      }
-      
-      setLoading(false);
-    } catch (error: any) {
-      let errorMessage = 'Pendaftaran gagal';
-      
-      if (error.message.includes('already registered')) {
-        errorMessage = 'Email sudah terdaftar';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage);
-      setLoading(false);
-      throw error;
-    }
-  };
-
   const logout = async () => {
     try {
       await supabase.auth.signOut();
@@ -246,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, session }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, session }}>
       {children}
     </AuthContext.Provider>
   );
