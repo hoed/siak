@@ -1,24 +1,16 @@
 
 import { ledgerClient } from '@/integrations/supabase/ledger-client';
-import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { JournalEntry, JournalEntryLine, JournalSummary, JournalFilter, JournalViewPeriod } from '@/types/ledger';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 
-// Get journal entries
-export const getJournalEntries = async (
-  viewPeriod: JournalViewPeriod = 'daily',
-  filter?: JournalFilter
-): Promise<JournalEntry[]> => {
+// Get journal entries with filter param
+export const getJournalEntries = async (filter?: JournalFilter): Promise<JournalEntry[]> => {
   try {
     let query = ledgerClient
       .from('journal_entries')
       .select(`
-        *,
-        journal_entry_lines(
-          *,
-          chart_of_accounts:account_id(id, code, name)
-        )
+        *
       `)
       .order('date', { ascending: false });
 
@@ -52,70 +44,9 @@ export const getJournalEntries = async (
   }
 };
 
-// Get journal entry details
-export const getJournalEntryDetails = async (journalEntryId: string): Promise<{
-  entry: JournalEntry | null;
-  lines: JournalEntryLine[];
-}> => {
-  try {
-    // Get the entry
-    const { data: entryData, error: entryError } = await ledgerClient
-      .from('journal_entries')
-      .select('*')
-      .eq('id', journalEntryId)
-      .single();
-
-    if (entryError) throw entryError;
-
-    // Get the lines with account info
-    const { data: linesData, error: linesError } = await ledgerClient
-      .from('journal_entry_lines')
-      .select(`
-        *,
-        chart_of_accounts:account_id(id, code, name)
-      `)
-      .eq('journal_entry_id', journalEntryId);
-
-    if (linesError) throw linesError;
-
-    const entry = entryData ? {
-      id: entryData.id,
-      date: entryData.date,
-      description: entryData.description,
-      entryNumber: entryData.entry_number,
-      isPosted: entryData.is_posted,
-      createdBy: entryData.created_by || '',
-      createdAt: entryData.created_at,
-      updatedAt: entryData.updated_at
-    } : null;
-
-    const lines = (linesData || []).map(line => {
-      const account = line.chart_of_accounts;
-      return {
-        id: line.id,
-        journalEntryId: line.journal_entry_id,
-        accountId: line.account_id,
-        accountCode: account?.code,
-        accountName: account?.name,
-        description: line.description || undefined,
-        debit: line.debit,
-        credit: line.credit,
-        createdAt: line.created_at,
-        updatedAt: line.updated_at
-      };
-    });
-
-    return { entry, lines };
-  } catch (error: any) {
-    toast.error(`Error fetching journal entry details: ${error.message}`);
-    return { entry: null, lines: [] };
-  }
-};
-
 // Create a journal entry
 export const createJournalEntry = async (
-  entry: Omit<JournalEntry, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>,
-  lines: Omit<JournalEntryLine, 'id' | 'journalEntryId' | 'createdAt' | 'updatedAt'>[]
+  entry: Omit<JournalEntry, "id" | "createdAt" | "updatedAt" | "createdBy">
 ): Promise<JournalEntry | null> => {
   try {
     // Start a transaction
@@ -131,23 +62,7 @@ export const createJournalEntry = async (
       .single();
 
     if (entryError) throw entryError;
-
-    // Insert lines
-    if (lines.length > 0) {
-      const linesForInsert = lines.map(line => ({
-        journal_entry_id: entryData.id,
-        account_id: line.accountId,
-        description: line.description || null,
-        debit: line.debit,
-        credit: line.credit
-      }));
-
-      const { error: linesError } = await ledgerClient
-        .from('journal_entry_lines')
-        .insert(linesForInsert);
-
-      if (linesError) throw linesError;
-    }
+    if (!entryData) throw new Error("Failed to create journal entry");
 
     toast.success('Journal entry created successfully');
 
@@ -195,55 +110,42 @@ export const deleteJournalEntry = async (journalEntryId: string): Promise<boolea
 };
 
 // Get journal summary
-export const getJournalSummary = async (
-  period: JournalViewPeriod = 'daily',
-  date: Date = new Date()
-): Promise<JournalSummary> => {
+export const getJournalSummary = async (): Promise<JournalSummary> => {
   try {
-    let startDate: string;
-    let endDate: string;
-
-    if (period === 'daily') {
-      startDate = format(startOfDay(date), 'yyyy-MM-dd');
-      endDate = format(endOfDay(date), 'yyyy-MM-dd');
-    } else {
-      startDate = format(startOfMonth(date), 'yyyy-MM-dd');
-      endDate = format(endOfMonth(date), 'yyyy-MM-dd');
-    }
-
-    // Get entries for the period
-    const { data: entries, error: entriesError } = await ledgerClient
+    // Get entries count
+    const { count: totalEntries, error: entriesError } = await ledgerClient
       .from('journal_entries')
-      .select('*')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false });
+      .select('*', { count: 'exact', head: true });
 
     if (entriesError) throw entriesError;
 
-    // Get totals for the period
+    // Get totals
     const { data: totals, error: totalsError } = await ledgerClient
       .from('journal_entry_lines')
       .select(`
-        journal_entry_id,
         debit,
         credit
-      `)
-      .in(
-        'journal_entry_id',
-        entries ? entries.map(e => e.id) : []
-      );
+      `);
 
     if (totalsError) throw totalsError;
+
+    // Get recent entries
+    const { data: recentEntries, error: recentError } = await ledgerClient
+      .from('journal_entries')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(5);
+
+    if (recentError) throw recentError;
 
     const totalDebits = totals ? totals.reduce((sum, line) => sum + line.debit, 0) : 0;
     const totalCredits = totals ? totals.reduce((sum, line) => sum + line.credit, 0) : 0;
 
     return {
-      totalEntries: entries ? entries.length : 0,
+      totalEntries: totalEntries || 0,
       totalDebits,
       totalCredits,
-      recentEntries: entries ? entries.slice(0, 5).map(entry => ({
+      recentEntries: recentEntries ? recentEntries.map(entry => ({
         id: entry.id,
         date: entry.date,
         description: entry.description,
@@ -265,20 +167,40 @@ export const getJournalSummary = async (
   }
 };
 
-// Generate filter dates based on period and selected date
-export const generateJournalFilterDates = (
-  period: JournalViewPeriod,
-  date: Date = new Date()
-): { start: string; end: string } => {
-  if (period === 'daily') {
+// Create journal entry line
+export const createJournalEntryLine = async (
+  line: Omit<JournalEntryLine, "id" | "createdAt" | "updatedAt">
+): Promise<JournalEntryLine | null> => {
+  try {
+    const { data, error } = await ledgerClient
+      .from('journal_entry_lines')
+      .insert({
+        journal_entry_id: line.journalEntryId,
+        account_id: line.accountId,
+        description: line.description || null,
+        debit: line.debit,
+        credit: line.credit
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error("Failed to create journal entry line");
+
     return {
-      start: format(startOfDay(date), 'yyyy-MM-dd'),
-      end: format(endOfDay(date), 'yyyy-MM-dd')
+      id: data.id,
+      journalEntryId: data.journal_entry_id,
+      accountId: data.account_id,
+      accountCode: data.account_code,
+      accountName: data.account_name,
+      description: data.description,
+      debit: data.debit,
+      credit: data.credit,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
     };
-  } else {
-    return {
-      start: format(startOfMonth(date), 'yyyy-MM-dd'),
-      end: format(endOfMonth(date), 'yyyy-MM-dd')
-    };
+  } catch (error: any) {
+    toast.error(`Error creating journal entry line: ${error.message}`);
+    return null;
   }
 };

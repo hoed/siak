@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -25,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -33,7 +33,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,14 +45,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon } from "@radix-ui/react-icons"
+import { CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Trash2, AlertTriangle, ShoppingCart, Plus, Package, FileText, Edit, CopyCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { JournalEntry, JournalEntryLine, JournalSummary, JournalViewPeriod, JournalFilter } from '@/types/ledger';
-import { getJournalEntries, getJournalEntryLines, getJournalSummary, createJournalEntry, updateJournalEntry, deleteJournalEntry, createJournalEntryLine, updateJournalEntryLine, deleteJournalEntryLine } from '@/services/ledgerService';
+import { getJournalEntries, getJournalSummary, createJournalEntry, deleteJournalEntry, createJournalEntryLine } from '@/services/ledgerService';
 import { format } from 'date-fns';
 
 const Journals: React.FC = () => {
@@ -64,6 +63,7 @@ const Journals: React.FC = () => {
   const [isAddEntryLineOpen, setIsAddEntryLineOpen] = useState<boolean>(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
     
   const [entryForm, setEntryForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -82,15 +82,22 @@ const Journals: React.FC = () => {
 
   const queryClient = useQueryClient();
 
+  // Get the date range for filtering journals
+  const getDateFilter = () => {
+    if (!selectedDate) return undefined;
+    
+    return {
+      dateRange: {
+        start: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
+        end: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0]
+      }
+    };
+  };
+
   // Fetch journal entries
   const { data: journalEntries = [], isLoading: isLoadingEntries } = useQuery({
-    queryKey: ['journalEntries'],
-    queryFn: () => getJournalEntries({
-      dateRange: {
-        start: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        end: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-      }
-    })
+    queryKey: ['journalEntries', selectedDate?.toISOString()],
+    queryFn: () => getJournalEntries(getDateFilter())
   });
 
   // Fetch journal summary
@@ -99,7 +106,7 @@ const Journals: React.FC = () => {
     queryFn: getJournalSummary
   });
 
-  // Filter items by search term and category
+  // Filter entries by search term
   const filteredEntries = journalEntries.filter(entry => {
     const matchesSearch = 
       entry.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -108,7 +115,7 @@ const Journals: React.FC = () => {
     return matchesSearch;
   });
 
-  // Create item mutation
+  // Create journal entry mutation
   const createEntryMutation = useMutation({
     mutationFn: createJournalEntry,
     onSuccess: () => {
@@ -123,25 +130,9 @@ const Journals: React.FC = () => {
     }
   });
 
-  // Update item mutation
-  const updateEntryMutation = useMutation({
-    mutationFn: (item: JournalEntry) => updateJournalEntry(item.id, item),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
-      queryClient.invalidateQueries({ queryKey: ['journalSummary'] });
-      setIsAddEntryOpen(false);
-      setEditingEntry(null);
-      resetEntryForm();
-      toast.success('Journal entry updated successfully');
-    },
-    onError: (error: any) => {
-      toast.error(`Error updating journal entry: ${error.message}`);
-    }
-  });
-
-  // Delete item mutation
+  // Delete entry mutation
   const deleteEntryMutation = useMutation({
-    mutationFn: (id: string) => deleteJournalEntry(id),
+    mutationFn: deleteJournalEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
       queryClient.invalidateQueries({ queryKey: ['journalSummary'] });
@@ -153,7 +144,7 @@ const Journals: React.FC = () => {
     }
   });
 
-  // Create transaction mutation
+  // Create journal entry line mutation
   const createEntryLineMutation = useMutation({
     mutationFn: createJournalEntryLine,
     onSuccess: () => {
@@ -189,22 +180,32 @@ const Journals: React.FC = () => {
 
   const handleEntrySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const entryData: Partial<JournalEntry> = {
+    
+    // Make sure required fields are present
+    if (!entryForm.date || !entryForm.description || !entryForm.entryNumber) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    const entryData = {
       date: entryForm.date,
       description: entryForm.description,
       entryNumber: entryForm.entryNumber,
       isPosted: entryForm.isPosted
     };
 
-    if (editingEntry) {
-      updateEntryMutation.mutate({ ...editingEntry, ...entryData });
-    } else {
-      createEntryMutation.mutate(entryData);
-    }
+    createEntryMutation.mutate(entryData);
   };
 
   const handleEntryLineSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Make sure required fields are present
+    if (!entryLineForm.journalEntryId || !entryLineForm.accountId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     createEntryLineMutation.mutate({
       journalEntryId: entryLineForm.journalEntryId,
       accountId: entryLineForm.accountId,
@@ -226,14 +227,14 @@ const Journals: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    //setDeleteId(id);
+    setDeleteId(id);
     setIsDeleteConfirmOpen(true);
   };
 
   const confirmDelete = () => {
-    //if (deleteId) {
-    //  deleteItemMutation.mutate(deleteId);
-    //}
+    if (deleteId) {
+      deleteEntryMutation.mutate(deleteId);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -433,6 +434,7 @@ const Journals: React.FC = () => {
                 id="description" 
                 value={entryForm.description} 
                 onChange={(e) => setEntryForm({...entryForm, description: e.target.value})}
+                required
               />
             </div>
             <div className="pt-4 flex justify-end space-x-2">

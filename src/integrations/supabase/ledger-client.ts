@@ -1,14 +1,9 @@
 
-import { createLedgerClient } from './ledger-types';
+import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://dfdmtpbvinkbizxwwzvb.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZG10cGJ2aW5rYml6eHd3enZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3MjAxMDEsImV4cCI6MjA2MDI5NjEwMX0.umm4eJ5EVm2Of1Yg7bGeTaUrCh22dNYI5GeMkEoCROU";
+// Use environment variables for connection or fallback to demo values
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 
-// Export the extended client for ledger
-export const ledgerClient = createLedgerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    storage: localStorage
-  }
-});
+// Create a Supabase client specifically for ledger operations
+export const ledgerClient = createClient(supabaseUrl, supabaseKey);
