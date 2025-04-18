@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -75,8 +76,8 @@ export default function Sidebar({ className, isOpen = true, onOpenChange }: Side
         className={cn(
           "flex items-center py-2 px-3 rounded-md text-sm transition-colors",
           active 
-            ? "bg-accent text-accent-foreground font-medium" 
-            : "hover:bg-accent/50 text-muted-foreground hover:text-foreground",
+            ? "bg-primary/20 text-white font-medium" 
+            : "hover:bg-primary/10 text-gray-200 hover:text-white",
           collapsed && "justify-center px-0",
           isSection && "mt-6"
         )}
@@ -105,19 +106,19 @@ export default function Sidebar({ className, isOpen = true, onOpenChange }: Side
   };
 
   return (
-    <div className={cn("h-screen bg-card border-r", sidebarWidth, "transition-all duration-300 ease-in-out", className)}>
+    <div className={cn("h-screen bg-sidebar border-r border-sidebar-border", sidebarWidth, "transition-all duration-300 ease-in-out", className)}>
       <div className="flex flex-col h-full">
         <div className="p-3">
           <div className="flex items-center justify-between">
             {!collapsed && (
               <Link to="/dashboard" className="flex items-center">
-                <span className="text-xl font-bold">Keuangan</span>
+                <span className="text-xl font-bold text-white">Keuangan</span>
               </Link>
             )}
             <Button 
               variant="ghost" 
               size="icon" 
-              className={cn("ml-auto", collapsed && "mx-auto")}
+              className={cn("ml-auto text-white hover:bg-primary/20", collapsed && "mx-auto")}
               onClick={toggleCollapsed}
             >
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Menu, BellRing, UserCircle, Sun, Moon } from 'lucide-react';
+import { Menu, BellRing, UserCircle, Sun, Moon, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 export interface HeaderProps {
   onMenuClick?: () => void;
@@ -10,9 +11,14 @@ export interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { setTheme, theme } = useTheme();
+  const { logout } = useAuth();
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -33,6 +39,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         <Button variant="ghost" size="icon">
           <UserCircle className="h-5 w-5" />
           <span className="sr-only">Profile</span>
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleLogout}>
+          <LogOut className="h-5 w-5" />
+          <span className="sr-only">Logout</span>
         </Button>
       </div>
     </header>
