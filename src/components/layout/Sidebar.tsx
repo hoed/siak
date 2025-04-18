@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Home, 
@@ -36,7 +35,6 @@ export default function Sidebar({ className, isOpen = true, onOpenChange }: Side
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Update local collapsed state when isOpen prop changes
   useEffect(() => {
     if (!isMobile) {
       setCollapsed(!isOpen);
@@ -56,10 +54,8 @@ export default function Sidebar({ className, isOpen = true, onOpenChange }: Side
     return location.pathname === path;
   };
 
-  // Set sidebarWidth based on collapsed state
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';
   
-  // Define icon size based on collapsed state
   const iconSize = collapsed ? 'h-5 w-5' : 'h-4 w-4';
 
   const renderNavItem = (
@@ -106,7 +102,13 @@ export default function Sidebar({ className, isOpen = true, onOpenChange }: Side
   };
 
   return (
-    <div className={cn("h-screen bg-sidebar border-r border-sidebar-border", sidebarWidth, "transition-all duration-300 ease-in-out", className)}>
+    <div className={cn(
+      "group/sidebar relative h-screen bg-sidebar border-r border-sidebar-border",
+      sidebarWidth,
+      "transition-all duration-300 ease-in-out",
+      "overflow-visible",
+      className
+    )}>
       <div className="flex flex-col h-full">
         <div className="p-3">
           <div className="flex items-center justify-between">
@@ -126,51 +128,22 @@ export default function Sidebar({ className, isOpen = true, onOpenChange }: Side
           </div>
         </div>
         
-        <div className="flex-1 px-3 py-2 overflow-y-auto">
-          <nav className="space-y-1">
-            {/* Dashboard */}
-            {renderNavItem("/dashboard", "Dashboard", <Home className={iconSize} />)}
-            
-            {/* Transactions */}
+        <div className="flex-1 space-y-1 overflow-x-hidden">
+          <nav className="px-3">
+            {renderNavItem("/dashboard", "Beranda", <Home className={iconSize} />)}
             {renderNavItem("/transactions", "Transaksi", <CircleDollarSign className={iconSize} />, true)}
-            
-            {/* Income */}
             {renderNavItem("/income", "Pemasukan", <ArrowUpRight className={iconSize} />)}
-            
-            {/* Expenses */}
             {renderNavItem("/expenses", "Pengeluaran", <ArrowDownRight className={iconSize} />)}
-            
-            {/* Accounts */}
             {renderNavItem("/accounts", "Akun Bank", <CreditCard className={iconSize} />, true)}
-            
-            {/* Receivables */}
             {renderNavItem("/receivables", "Piutang", <Receipt className={iconSize} />)}
-            
-            {/* Debts */}
             {renderNavItem("/debts", "Hutang", <PiggyBank className={iconSize} />)}
-            
-            {/* Inventory */}
             {renderNavItem("/inventory", "Inventaris", <PackageOpen className={iconSize} />, true)}
-            
-            {/* Chart of Accounts */}
             {renderNavItem("/chart-of-accounts", "Bagan Akun", <Layers3 className={iconSize} />)}
-            
-            {/* Journals */}
             {renderNavItem("/journals", "Jurnal", <BookOpen className={iconSize} />)}
-            
-            {/* Categories */}
             {renderNavItem("/categories", "Kategori", <Tags className={iconSize} />, true)}
-            
-            {/* Customers */}
             {renderNavItem("/customers", "Pelanggan", <UserCircle className={iconSize} />)}
-            
-            {/* Suppliers */}
             {renderNavItem("/suppliers", "Pemasok", <Users className={iconSize} />)}
-            
-            {/* Reports */}
             {renderNavItem("/reports", "Laporan", <BarChart3 className={iconSize} />, true)}
-            
-            {/* Settings */}
             {renderNavItem("/settings", "Pengaturan", <Settings className={iconSize} />, true)}
           </nav>
         </div>
