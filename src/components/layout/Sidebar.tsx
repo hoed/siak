@@ -22,20 +22,20 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const navigationItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: Home, role: ['user', 'admin', 'manager', 'accountant'] },
-  { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: PieChart, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Income', path: '/income', icon: TrendingUp, role: ['user', 'admin', 'manager', 'accountant'] },
-  { name: 'Expenses', path: '/expenses', icon: TrendingDown, role: ['user', 'admin', 'manager', 'accountant'] },
-  { name: 'Transactions', path: '/transactions', icon: FileText, role: ['user', 'admin', 'manager', 'accountant'] },
-  { name: 'Debts', path: '/debts', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Receivables', path: '/receivables', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Accounts', path: '/accounts', icon: Layers, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Reports', path: '/reports', icon: BarChart2, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Categories', path: '/categories', icon: Calendar, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Users', path: '/users', icon: UserCog, role: ['admin'] },
-  { name: 'Customers', path: '/customers', icon: Users, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Suppliers', path: '/suppliers', icon: Users, role: ['admin', 'manager', 'accountant'] },
-  { name: 'Settings', path: '/settings', icon: Settings, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Dasbor', path: '/dashboard', icon: Home, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Bagan Akun', path: '/chart-of-accounts', icon: PieChart, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Pendapatan', path: '/income', icon: TrendingUp, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Pengeluaran', path: '/expenses', icon: TrendingDown, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Transaksi', path: '/transactions', icon: FileText, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Utang', path: '/debts', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Piutang', path: '/receivables', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Akun', path: '/accounts', icon: Layers, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Laporan', path: '/reports', icon: BarChart2, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Kategori', path: '/categories', icon: Calendar, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Pengguna', path: '/users', icon: UserCog, role: ['admin'] },
+  { name: 'Pelanggan', path: '/customers', icon: Users, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Pemasok', path: '/suppliers', icon: Users, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Pengaturan', path: '/settings', icon: Settings, role: ['admin', 'manager', 'accountant'] },
 ];
 
 const Sidebar: React.FC = () => {
@@ -55,7 +55,10 @@ const Sidebar: React.FC = () => {
   );
 
   return (
-    <div className={sidebarClasses}>
+    <div
+      className={sidebarClasses}
+      style={{ backgroundColor: '#3399FF', color: '#FFFFFF' }} // Fallback blue background and white text
+    >
       <div className="flex items-center justify-between p-4">
         {isOpen && <span className="text-lg font-semibold text-sidebar-foreground">SisKeu</span>}
         <Button

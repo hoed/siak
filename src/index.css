@@ -34,14 +34,14 @@
 
     --radius: 0.5rem;
 
-    --sidebar-background: 210 80% 50% !important; /* Vibrant blue with high priority */
-    --sidebar-foreground: 0 0% 98% !important; /* Pure white for text/icons */
-    --sidebar-primary: 210 80% 60%; /* Lighter blue for hover/active */
-    --sidebar-primary-foreground: 0 0% 98%; /* White */
-    --sidebar-accent: 210 80% 55%; /* Slightly lighter blue for accents */
-    --sidebar-accent-foreground: 0 0% 98%; /* White */
-    --sidebar-border: 210 80% 45%; /* Slightly darker blue for border */
-    --sidebar-ring: 210 80% 60%; /* Lighter blue for focus ring */
+    --sidebar-background: #3399FF !important; /* Blue with hex fallback */
+    --sidebar-foreground: #FFFFFF !important; /* Pure white */
+    --sidebar-primary: #66B2FF !important; /* Lighter blue for hover/active */
+    --sidebar-primary-foreground: #FFFFFF !important; /* White */
+    --sidebar-accent: #4DA8FF !important; /* Slightly lighter blue for accents */
+    --sidebar-accent-foreground: #FFFFFF !important; /* White */
+    --sidebar-border: #1A8CFF !important; /* Slightly darker blue for border */
+    --sidebar-ring: #66B2FF !important; /* Lighter blue for focus ring */
   }
 
   .dark {
@@ -96,10 +96,10 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Direct sidebar styling to ensure blue background */
-  .sidebar {
-    background-color: hsl(210, 80%, 50%) !important;
-    color: hsl(0, 0%, 98%) !important;
+  /* High-specificity sidebar styling */
+  div.sidebar {
+    background-color: #3399FF !important;
+    color: #FFFFFF !important;
   }
 }
 
