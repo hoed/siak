@@ -34,9 +34,14 @@
 
     --radius: 0.5rem;
 
-    --sidebar: 210 64% 20%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-border: 210 64% 25%;
+    --sidebar-background: #014991 !important;
+    --sidebar-foreground: #FFFFFF !important;
+    --sidebar-primary: #015fbd !important;
+    --sidebar-primary-foreground: #FFFFFF !important;
+    --sidebar-accent: #015fbd !important;
+    --sidebar-accent-foreground: #FFFFFF !important;
+    --sidebar-border: #015fbd !important;
+    --sidebar-ring: #66B2FF !important;
   }
 
   .dark {
@@ -68,20 +73,45 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
     
-    --sidebar: 210 64% 15%;
+    --sidebar-background: 210 64% 15%;
     --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 64% 50%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 64% 20%;
+    --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 210 64% 10%;
+    --sidebar-ring: 210 64% 50%;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Highly specific sidebar styling */
+  div[data-sidebar="true"].sidebar {
+    background-color: #014991 !important;
+    color: #FFFFFF !important;
+  }
+
+  /* Fallback for any sidebar */
+  .sidebar {
+    background-color: #014991 !important;
+    color: #FFFFFF !important;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
@@ -129,34 +159,4 @@
   .small-box-icon {
     @apply absolute right-4 top-1/2 -translate-y-1/2 text-4xl opacity-30;
   }
-}
-
-@layer utilities {
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-}
-
-/* Custom Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgb(156 163 175 / 0.5);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgb(156 163 175 / 0.7);
 }
