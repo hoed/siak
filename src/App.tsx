@@ -44,8 +44,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="keuangan-theme">
-        <AuthProvider>
-          <Router>
+        <Router>
+          <AuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Index />} />
@@ -179,10 +179,10 @@ function App() {
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Router>
-          <CreateTestUsers />
-          <Toaster />
-        </AuthProvider>
+            <CreateTestUsers />
+            <Toaster />
+          </AuthProvider>
+        </Router>
       </ThemeProvider>
     </QueryClientProvider>
   );
