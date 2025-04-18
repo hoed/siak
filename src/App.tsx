@@ -4,8 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { AuthProvider } from '@/contexts/auth/AuthProvider';
-import RequireAuth from '@/contexts/auth/RequireAuth';
-import CreateTestUsers from '@/contexts/auth/CreateTestUsers';
+import { RequireAuth } from '@/contexts/auth/RequireAuth';
+import { CreateTestUsers } from '@/contexts/auth/CreateTestUsers';
 
 import './App.css';
 

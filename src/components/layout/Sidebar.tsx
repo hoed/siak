@@ -24,7 +24,7 @@ import {
   Layers3,
   BookOpen
 } from 'lucide-react';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   isOpen?: boolean;
@@ -33,7 +33,7 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export default function Sidebar({ className, isOpen = true, onOpenChange }: SidebarProps) {
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
 
   // Update local collapsed state when isOpen prop changes

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -133,7 +132,7 @@ const Inventory: React.FC = () => {
 
   // Update item mutation
   const updateItemMutation = useMutation({
-    mutationFn: (item: InventoryItem) => updateInventoryItem(item.id, item),
+    mutationFn: (item: InventoryItem) => updateInventoryItem(item),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       queryClient.invalidateQueries({ queryKey: ['inventorySummary'] });
@@ -208,18 +207,19 @@ const Inventory: React.FC = () => {
 
   const handleItemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const itemData: Partial<InventoryItem> = {
+    
+    const itemData = {
       name: itemForm.name,
       sku: itemForm.sku,
-      description: itemForm.description,
-      category: itemForm.category,
       quantity: Number(itemForm.quantity),
       unitPrice: Number(itemForm.unitPrice),
       costPrice: Number(itemForm.costPrice),
+      description: itemForm.description || '',
+      category: itemForm.category || '',
       minimumStock: Number(itemForm.minimumStock),
-      location: itemForm.location,
-      imageUrl: itemForm.imageUrl,
-      barcode: itemForm.barcode,
+      location: itemForm.location || '',
+      imageUrl: itemForm.imageUrl || '',
+      barcode: itemForm.barcode || '',
       supplier_id: itemForm.supplier_id || undefined
     };
 
