@@ -1,153 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  Home, 
-  BarChart3, 
-  CreditCard, 
-  Settings, 
-  Receipt, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Users, 
-  UserCircle, 
-  Tags,
-  PackageOpen,
-  PiggyBank,
-  FileText,
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth/AuthContext';
+import {
+  BarChart2,
+  Calendar,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
-  Layers3,
-  BookOpen
+  CreditCard,
+  FileText,
+  Home,
+  Layers,
+  PieChart,
+  Settings,
+  TrendingDown,
+  TrendingUp,
+  UserCog,
+  Users,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-  isOpen?: boolean;
-  onOpenChange?: (isOpen: boolean) => void;
-}
+const navigationItems = [
+  { name: 'Dashboard', path: '/dashboard', icon: Home, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: PieChart, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Income', path: '/income', icon: TrendingUp, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Expenses', path: '/expenses', icon: TrendingDown, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Transactions', path: '/transactions', icon: FileText, role: ['user', 'admin', 'manager', 'accountant'] },
+  { name: 'Debts', path: '/debts', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Receivables', path: '/receivables', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Accounts', path: '/accounts', icon: Layers, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Reports', path: '/reports', icon: BarChart2, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Categories', path: '/categories', icon: Calendar, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Users', path: '/users', icon: UserCog, role: ['admin'] },
+  { name: 'Customers', path: '/customers', icon: Users, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Suppliers', path: '/suppliers', icon: Users, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Settings', path: '/settings', icon: Settings, role: ['admin', 'manager', 'accountant'] },
+];
 
-export default function Sidebar({ className, isOpen = true, onOpenChange }: SidebarProps) {
-  const location = useLocation();
+const Sidebar: React.FC = () => {
+  const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(false);
+  const [isOpen, setIsOpen] = React.useState(!isMobile);
 
-  useEffect(() => {
-    if (!isMobile) {
-      setCollapsed(!isOpen);
-    }
-  }, [isOpen, isMobile]);
-
-  const toggleCollapsed = () => {
-    const newCollapsedState = !collapsed;
-    setCollapsed(newCollapsedState);
-    
-    if (onOpenChange) {
-      onOpenChange(!newCollapsedState);
-    }
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen);
   };
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
-
-  const sidebarWidth = collapsed ? 'w-16' : 'w-64';
-  
-  const iconSize = collapsed ? 'h-5 w-5' : 'h-4 w-4';
-
-  const renderNavItem = (
-    path: string, 
-    label: string, 
-    icon: React.ReactNode, 
-    isSection: boolean = false
-  ) => {
-    const active = isActive(path);
-    
-    const item = (
-      <Link
-        to={path}
-        className={cn(
-          "flex items-center py-2 px-3 rounded-md text-sm transition-colors",
-          active 
-            ? "bg-primary/20 text-white font-medium" 
-            : "hover:bg-primary/10 text-gray-200 hover:text-white",
-          collapsed && "justify-center px-0",
-          isSection && "mt-6"
-        )}
-      >
-        <span className={cn("mr-2", collapsed && "mr-0", iconSize)}>{icon}</span>
-        {!collapsed && <span>{label}</span>}
-      </Link>
-    );
-
-    if (collapsed) {
-      return (
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {item}
-            </TooltipTrigger>
-            <TooltipContent side="right" className="ml-2 bg-secondary">
-              {label}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    return item;
-  };
+  const sidebarClasses = cn(
+    'sidebar h-screen flex flex-col border-r border-sidebar-border transition-all duration-300 overflow-hidden',
+    isOpen ? 'w-64' : 'w-16',
+    isMobile && isOpen ? 'fixed z-40 shadow-xl' : '',
+    isMobile && !isOpen ? 'w-0 border-none' : ''
+  );
 
   return (
-    <div className={cn(
-      "group/sidebar relative h-screen bg-sidebar border-r border-sidebar-border",
-      sidebarWidth,
-      "transition-all duration-300 ease-in-out",
-      "overflow-visible",
-      className
-    )}>
-      <div className="flex flex-col h-full">
-        <div className="p-3">
-          <div className="flex items-center justify-between">
-            {!collapsed && (
-              <Link to="/dashboard" className="flex items-center">
-                <span className="text-xl font-bold text-white">Keuangan</span>
-              </Link>
-            )}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn("ml-auto text-white hover:bg-primary/20", collapsed && "mx-auto")}
-              onClick={toggleCollapsed}
-            >
-              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex-1 space-y-1 overflow-x-hidden">
-          <nav className="px-3">
-            {renderNavItem("/dashboard", "Beranda", <Home className={iconSize} />)}
-            {renderNavItem("/transactions", "Transaksi", <CircleDollarSign className={iconSize} />, true)}
-            {renderNavItem("/income", "Pemasukan", <ArrowUpRight className={iconSize} />)}
-            {renderNavItem("/expenses", "Pengeluaran", <ArrowDownRight className={iconSize} />)}
-            {renderNavItem("/accounts", "Akun Bank", <CreditCard className={iconSize} />, true)}
-            {renderNavItem("/receivables", "Piutang", <Receipt className={iconSize} />)}
-            {renderNavItem("/debts", "Hutang", <PiggyBank className={iconSize} />)}
-            {renderNavItem("/inventory", "Inventaris", <PackageOpen className={iconSize} />, true)}
-            {renderNavItem("/chart-of-accounts", "Bagan Akun", <Layers3 className={iconSize} />)}
-            {renderNavItem("/journals", "Jurnal", <BookOpen className={iconSize} />)}
-            {renderNavItem("/categories", "Kategori", <Tags className={iconSize} />, true)}
-            {renderNavItem("/customers", "Pelanggan", <UserCircle className={iconSize} />)}
-            {renderNavItem("/suppliers", "Pemasok", <Users className={iconSize} />)}
-            {renderNavItem("/reports", "Laporan", <BarChart3 className={iconSize} />, true)}
-            {renderNavItem("/settings", "Pengaturan", <Settings className={iconSize} />, true)}
-          </nav>
-        </div>
+    <div className={sidebarClasses}>
+      <div className="flex items-center justify-between p-4">
+        {isOpen && <span className="text-lg font-semibold text-sidebar-foreground">SisKeu</span>}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </Button>
       </div>
+
+      <nav className="flex-1 overflow-y-auto">
+        <ul className="space-y-2 p-2">
+          {navigationItems
+            .filter((item) => user && item.role.includes(user.role))
+            .map((item) => (
+              <li key={item.name}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
+                  {isOpen && <span>{item.name}</span>}
+                </NavLink>
+              </li>
+            ))}
+        </ul>
+      </nav>
     </div>
   );
-}
+};
+
+export default Sidebar;

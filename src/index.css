@@ -34,12 +34,12 @@
 
     --radius: 0.5rem;
 
-    --sidebar-background: 210 80% 50%; /* Vibrant blue for light theme */
-    --sidebar-foreground: 210 40% 98%; /* White text/icons */
-    --sidebar-primary: 210 80% 60%; /* Lighter blue for hover/active states */
-    --sidebar-primary-foreground: 210 40% 98%; /* White */
+    --sidebar-background: 210 80% 50% !important; /* Vibrant blue with high priority */
+    --sidebar-foreground: 0 0% 98% !important; /* Pure white for text/icons */
+    --sidebar-primary: 210 80% 60%; /* Lighter blue for hover/active */
+    --sidebar-primary-foreground: 0 0% 98%; /* White */
     --sidebar-accent: 210 80% 55%; /* Slightly lighter blue for accents */
-    --sidebar-accent-foreground: 210 40% 98%; /* White */
+    --sidebar-accent-foreground: 0 0% 98%; /* White */
     --sidebar-border: 210 80% 45%; /* Slightly darker blue for border */
     --sidebar-ring: 210 80% 60%; /* Lighter blue for focus ring */
   }
@@ -94,6 +94,12 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Direct sidebar styling to ensure blue background */
+  .sidebar {
+    background-color: hsl(210, 80%, 50%) !important;
+    color: hsl(0, 0%, 98%) !important;
   }
 }
 
