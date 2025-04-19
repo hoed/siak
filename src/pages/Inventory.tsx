@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getInventoryItems, updateInventoryItem, deleteInventoryItem, createInventoryItem } from '@/services/inventoryService';
-import { BaseInventoryItem, convertToFoodInventoryItem, convertFromFoodInventoryItem } from '@/types/common-inventory';
+import { BaseInventoryItem, InventoryItem, convertToFoodInventoryItem, convertFromFoodInventoryItem } from '@/types/common-inventory';
 
 type InventoryItemType = 'all' | 'product' | 'ingredient' | 'asset';
 
@@ -71,10 +71,15 @@ const Inventory: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Fetch inventory items
-  const { data: items = [], isLoading } = useQuery({
+  const { data: itemsData = [], isLoading } = useQuery({
     queryKey: ['inventoryItems'],
     queryFn: getInventoryItems
   });
+
+  // Convert fetched items to BaseInventoryItem type
+  const items: BaseInventoryItem[] = itemsData.map((item: any) => 
+    'itemType' in item ? convertFromFoodInventoryItem(item as InventoryItem) : item
+  );
 
   // Create item mutation
   const createMutation = useMutation({

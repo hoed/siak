@@ -37,7 +37,7 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ user: null, isLoading: false }}>
+      <AuthContext.Provider value={{ user: null, loading: false }}>
         <Router>
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Memuat...</div>}>
             <Routes>

@@ -9,20 +9,16 @@ import { User } from './types';
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
-  session: Session | null;
+  login?: (email: string, password: string) => Promise<void>;
+  logout?: () => void;
+  updateUser?: (userData: Partial<User>) => void;
+  session?: Session | null;
 };
 
 // Create context with default values
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: async () => {},
-  logout: () => {},
-  updateUser: () => {},
-  session: null
 });
 
 // Custom hook to use the auth context

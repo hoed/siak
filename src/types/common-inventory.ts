@@ -15,8 +15,26 @@ export interface BaseInventoryItem {
   updatedAt: string;
 }
 
+// Define an interface that conforms to the expected InventoryItem shape
+export interface InventoryItem {
+  id: string;
+  itemType: string;
+  itemId: string;
+  name: string;
+  sku: string;
+  description?: string;
+  category?: string;
+  quantity: number;
+  unitPrice: number;
+  costPrice: number;
+  minimumStock?: number;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Helper functions to convert between different inventory item types
-export const convertToFoodInventoryItem = (item: BaseInventoryItem): any => {
+export const convertToFoodInventoryItem = (item: BaseInventoryItem): InventoryItem => {
   return {
     id: item.id,
     itemType: item.category ? 'product' : 'ingredient',
@@ -35,7 +53,7 @@ export const convertToFoodInventoryItem = (item: BaseInventoryItem): any => {
   };
 };
 
-export const convertFromFoodInventoryItem = (item: any): BaseInventoryItem => {
+export const convertFromFoodInventoryItem = (item: InventoryItem): BaseInventoryItem => {
   return {
     id: item.id,
     name: item.name,
@@ -44,7 +62,7 @@ export const convertFromFoodInventoryItem = (item: any): BaseInventoryItem => {
     category: item.category || '',
     quantity: item.quantity,
     unitPrice: item.unitPrice,
-    costPrice: item.costPrice || item.unitPrice,
+    costPrice: item.costPrice,
     minimumStock: item.minimumStock || 0,
     isActive: item.isActive !== undefined ? item.isActive : true,
     createdAt: item.createdAt || new Date().toISOString(),
