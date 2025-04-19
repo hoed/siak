@@ -1,459 +1,225 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { LedgerAccount, LedgerEntry } from '@/types/food-manufacturing';
-import { toast } from 'sonner';
+import { 
+  JournalEntry, JournalEntryLine, JournalSummary, 
+  JournalFilter, JournalViewPeriod 
+} from '@/types/ledger';
+import { format, subMonths, subWeeks, parseISO } from 'date-fns';
 
-export interface LedgerFilter {
-  accountId?: string;
-  dateRange?: {
-    start?: string;
-    end?: string;
-  };
-  searchQuery?: string;
-}
-
-// Get ledger accounts
-export const getLedgerAccounts = async (): Promise<LedgerAccount[]> => {
-  try {
-    // Mock ledger accounts (temporary until database tables are set up)
-    const mockLedgerAccounts: LedgerAccount[] = [
-      {
-        id: '1',
-        code: '1101',
-        name: 'Kas',
-        type: 'asset',
-        subtype: 'Current Asset',
-        description: 'Kas fisik perusahaan',
-        isActive: true,
-        balance: 15000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '2',
-        code: '1102',
-        name: 'Bank',
-        type: 'asset',
-        subtype: 'Current Asset',
-        description: 'Rekening bank perusahaan',
-        isActive: true,
-        balance: 85000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '3',
-        code: '1201',
-        name: 'Piutang Dagang',
-        type: 'asset',
-        subtype: 'Current Asset',
-        description: 'Piutang dari pelanggan',
-        isActive: true,
-        balance: 25000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '4',
-        code: '1301',
-        name: 'Persediaan Bahan Baku',
-        type: 'asset',
-        subtype: 'Current Asset',
-        description: 'Persediaan bahan baku produksi',
-        isActive: true,
-        balance: 35000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '5',
-        code: '1302',
-        name: 'Persediaan Barang Jadi',
-        type: 'asset',
-        subtype: 'Current Asset',
-        description: 'Persediaan produk jadi siap jual',
-        isActive: true,
-        balance: 40000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '6',
-        code: '1401',
-        name: 'Peralatan',
-        type: 'asset',
-        subtype: 'Fixed Asset',
-        description: 'Mesin dan peralatan produksi',
-        isActive: true,
-        balance: 150000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '7',
-        code: '2101',
-        name: 'Hutang Dagang',
-        type: 'liability',
-        subtype: 'Current Liability',
-        description: 'Hutang kepada supplier',
-        isActive: true,
-        balance: 45000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '8',
-        code: '3101',
-        name: 'Modal',
-        type: 'equity',
-        description: 'Modal pemilik',
-        isActive: true,
-        balance: 250000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '9',
-        code: '4101',
-        name: 'Pendapatan Penjualan',
-        type: 'revenue',
-        description: 'Pendapatan dari penjualan produk',
-        isActive: true,
-        balance: 180000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '10',
-        code: '5101',
-        name: 'Biaya Bahan Baku',
-        type: 'expense',
-        description: 'Biaya pembelian bahan baku',
-        isActive: true,
-        balance: 85000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '11',
-        code: '5102',
-        name: 'Biaya Tenaga Kerja',
-        type: 'expense',
-        description: 'Biaya gaji dan upah',
-        isActive: true,
-        balance: 45000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      },
-      {
-        id: '12',
-        code: '5103',
-        name: 'Biaya Overhead Pabrik',
-        type: 'expense',
-        description: 'Biaya operasional pabrik',
-        isActive: true,
-        balance: 25000000,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-04-18T12:30:00Z'
-      }
-    ];
-
-    return mockLedgerAccounts;
-
-    // When database is ready, uncomment and use this code instead
-    /*
-    const { data, error } = await supabase
-      .from('ledger_accounts')
-      .select('*')
-      .order('code');
-
-    if (error) throw error;
-
-    return (data || []).map(item => ({
-      id: item.id,
-      code: item.code,
-      name: item.name,
-      type: item.type,
-      subtype: item.subtype,
-      description: item.description,
-      isActive: item.is_active,
-      balance: item.balance,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at
-    }));
-    */
-  } catch (error: any) {
-    toast.error(`Error fetching ledger accounts: ${error.message}`);
-    console.error('Error fetching ledger accounts:', error);
-    return [];
+// Mock data for development - will be replaced with real API calls
+const mockJournalEntries: JournalEntry[] = [
+  {
+    id: '1',
+    date: '2025-04-15',
+    entryNumber: 'JE-2025-0001',
+    description: 'Initial inventory purchase',
+    isPosted: true,
+    createdAt: '2025-04-15T10:00:00Z',
+    createdBy: 'system',
+    updatedAt: '2025-04-15T10:00:00Z'
+  },
+  {
+    id: '2',
+    date: '2025-04-16',
+    entryNumber: 'JE-2025-0002',
+    description: 'Monthly rent payment',
+    isPosted: true,
+    createdAt: '2025-04-16T11:30:00Z',
+    createdBy: 'system',
+    updatedAt: '2025-04-16T11:30:00Z'
+  },
+  {
+    id: '3',
+    date: '2025-04-17',
+    entryNumber: 'JE-2025-0003',
+    description: 'Sales revenue recording',
+    isPosted: false,
+    createdAt: '2025-04-17T14:45:00Z',
+    createdBy: 'system',
+    updatedAt: '2025-04-17T14:45:00Z'
   }
-};
+];
 
-// Get ledger entries
-export const getLedgerEntries = async (filter?: LedgerFilter): Promise<LedgerEntry[]> => {
+const mockJournalLines: JournalEntryLine[] = [
+  {
+    id: '1',
+    journalEntryId: '1',
+    accountId: '101',
+    description: 'Cash payment for inventory',
+    debit: 0,
+    credit: 5000000,
+    createdAt: '2025-04-15T10:00:00Z',
+    updatedAt: '2025-04-15T10:00:00Z'
+  },
+  {
+    id: '2',
+    journalEntryId: '1',
+    accountId: '201',
+    description: 'Inventory received',
+    debit: 5000000,
+    credit: 0,
+    createdAt: '2025-04-15T10:00:00Z',
+    updatedAt: '2025-04-15T10:00:00Z'
+  },
+  {
+    id: '3',
+    journalEntryId: '2',
+    accountId: '101',
+    description: 'Rent payment',
+    debit: 0,
+    credit: 2500000,
+    createdAt: '2025-04-16T11:30:00Z',
+    updatedAt: '2025-04-16T11:30:00Z'
+  },
+  {
+    id: '4',
+    journalEntryId: '2',
+    accountId: '610',
+    description: 'Rent expense',
+    debit: 2500000,
+    credit: 0,
+    createdAt: '2025-04-16T11:30:00Z',
+    updatedAt: '2025-04-16T11:30:00Z'
+  }
+];
+
+// Function to get journal entries
+export const getJournalEntries = async (filter?: JournalFilter): Promise<JournalEntry[]> => {
   try {
-    // Mock ledger entries (temporary until database tables are set up)
-    const mockLedgerEntries: LedgerEntry[] = [
-      {
-        id: '1',
-        date: '2025-04-15',
-        journalEntryId: 'J-2025-04-001',
-        accountId: '1101',
-        description: 'Pembayaran tunai dari pelanggan',
-        debit: 5000000,
-        credit: 0,
-        balance: 15000000,
-        createdAt: '2025-04-15T10:30:00Z',
-        updatedAt: '2025-04-15T10:30:00Z'
-      },
-      {
-        id: '2',
-        date: '2025-04-15',
-        journalEntryId: 'J-2025-04-001',
-        accountId: '4101',
-        description: 'Penjualan produk',
-        debit: 0,
-        credit: 5000000,
-        balance: 180000000,
-        createdAt: '2025-04-15T10:30:00Z',
-        updatedAt: '2025-04-15T10:30:00Z'
-      },
-      {
-        id: '3',
-        date: '2025-04-14',
-        journalEntryId: 'J-2025-04-002',
-        accountId: '5101',
-        description: 'Pembelian bahan baku',
-        debit: 3500000,
-        credit: 0,
-        balance: 85000000,
-        createdAt: '2025-04-14T14:20:00Z',
-        updatedAt: '2025-04-14T14:20:00Z'
-      },
-      {
-        id: '4',
-        date: '2025-04-14',
-        journalEntryId: 'J-2025-04-002',
-        accountId: '1102',
-        description: 'Pembayaran bahan baku',
-        debit: 0,
-        credit: 3500000,
-        balance: 85000000,
-        createdAt: '2025-04-14T14:20:00Z',
-        updatedAt: '2025-04-14T14:20:00Z'
-      },
-      {
-        id: '5',
-        date: '2025-04-12',
-        journalEntryId: 'J-2025-04-003',
-        accountId: '1102',
-        description: 'Penerimaan pembayaran piutang',
-        debit: 7500000,
-        credit: 0,
-        balance: 88500000,
-        createdAt: '2025-04-12T09:45:00Z',
-        updatedAt: '2025-04-12T09:45:00Z'
-      },
-      {
-        id: '6',
-        date: '2025-04-12',
-        journalEntryId: 'J-2025-04-003',
-        accountId: '1201',
-        description: 'Penerimaan pembayaran piutang',
-        debit: 0,
-        credit: 7500000,
-        balance: 25000000,
-        createdAt: '2025-04-12T09:45:00Z',
-        updatedAt: '2025-04-12T09:45:00Z'
-      },
-      {
-        id: '7',
-        date: '2025-04-10',
-        journalEntryId: 'J-2025-04-004',
-        accountId: '2101',
-        description: 'Pembayaran hutang kepada supplier',
-        debit: 4500000,
-        credit: 0,
-        balance: 45000000,
-        createdAt: '2025-04-10T15:30:00Z',
-        updatedAt: '2025-04-10T15:30:00Z'
-      },
-      {
-        id: '8',
-        date: '2025-04-10',
-        journalEntryId: 'J-2025-04-004',
-        accountId: '1102',
-        description: 'Pembayaran hutang kepada supplier',
-        debit: 0,
-        credit: 4500000,
-        balance: 84000000,
-        createdAt: '2025-04-10T15:30:00Z',
-        updatedAt: '2025-04-10T15:30:00Z'
-      },
-      {
-        id: '9',
-        date: '2025-04-05',
-        journalEntryId: 'J-2025-04-005',
-        accountId: '5102',
-        description: 'Pembayaran gaji karyawan',
-        debit: 12000000,
-        credit: 0,
-        balance: 45000000,
-        createdAt: '2025-04-05T16:15:00Z',
-        updatedAt: '2025-04-05T16:15:00Z'
-      },
-      {
-        id: '10',
-        date: '2025-04-05',
-        journalEntryId: 'J-2025-04-005',
-        accountId: '1102',
-        description: 'Pembayaran gaji karyawan',
-        debit: 0,
-        credit: 12000000,
-        balance: 80000000,
-        createdAt: '2025-04-05T16:15:00Z',
-        updatedAt: '2025-04-05T16:15:00Z'
-      }
-    ];
-
-    // Apply filters
-    let filteredEntries = [...mockLedgerEntries];
-
-    if (filter) {
-      if (filter.accountId) {
-        filteredEntries = filteredEntries.filter(entry => entry.accountId === filter.accountId);
-      }
-
-      if (filter.dateRange) {
-        if (filter.dateRange.start) {
-          filteredEntries = filteredEntries.filter(
-            entry => new Date(entry.date) >= new Date(filter.dateRange!.start!)
-          );
-        }
-        if (filter.dateRange.end) {
-          filteredEntries = filteredEntries.filter(
-            entry => new Date(entry.date) <= new Date(filter.dateRange!.end!)
-          );
-        }
-      }
-
-      if (filter.searchQuery) {
-        const searchLower = filter.searchQuery.toLowerCase();
-        filteredEntries = filteredEntries.filter(
-          entry => entry.description.toLowerCase().includes(searchLower)
-        );
-      }
+    // In a real implementation, we would fetch data from Supabase
+    console.log('Fetching journal entries with filter:', filter);
+    
+    // For now, return mock data with filtering
+    let filteredEntries = [...mockJournalEntries];
+    
+    if (filter?.dateRange) {
+      filteredEntries = filteredEntries.filter(entry => {
+        const entryDate = entry.date;
+        return entryDate >= filter.dateRange.start && entryDate <= filter.dateRange.end;
+      });
     }
-
-    // Sort by date (most recent first)
-    filteredEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
+    
     return filteredEntries;
-
-    // When database is ready, uncomment and use this code instead
-    /*
-    let query = supabase
-      .from('ledger_entries')
-      .select(`
-        *,
-        ledger_accounts:account_id (code, name)
-      `)
-      .order('date', { ascending: false });
-
-    if (filter) {
-      if (filter.accountId) {
-        query = query.eq('account_id', filter.accountId);
-      }
-
-      if (filter.dateRange) {
-        if (filter.dateRange.start) {
-          query = query.gte('date', filter.dateRange.start);
-        }
-        if (filter.dateRange.end) {
-          query = query.lte('date', filter.dateRange.end);
-        }
-      }
-
-      if (filter.searchQuery) {
-        query = query.ilike('description', `%${filter.searchQuery}%`);
-      }
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    return (data || []).map(item => ({
-      id: item.id,
-      date: item.date,
-      journalEntryId: item.journal_entry_id,
-      accountId: item.account_id,
-      accountCode: item.ledger_accounts?.code || '',
-      accountName: item.ledger_accounts?.name || '',
-      description: item.description,
-      debit: item.debit,
-      credit: item.credit,
-      balance: item.balance,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at
-    }));
-    */
-  } catch (error: any) {
-    toast.error(`Error fetching ledger entries: ${error.message}`);
-    console.error('Error fetching ledger entries:', error);
-    return [];
-  }
-};
-
-// Get journal entries
-export const getJournalEntries = async (filter?: any) => {
-  try {
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .select(`
-        *
-      `)
-      .order('date', { ascending: false });
-
-    if (error) throw error;
-
-    return (data || []).map(entry => {
-      return {
-        id: entry.id,
-        date: entry.date,
-        description: entry.description,
-        entryNumber: entry.entry_number,
-        isPosted: entry.is_posted,
-        createdBy: entry.created_by || '',
-        createdAt: entry.created_at,
-        updatedAt: entry.updated_at
-      };
-    });
-  } catch (error: any) {
-    toast.error(`Error fetching journal entries: ${error.message}`);
+  } catch (error) {
     console.error('Error fetching journal entries:', error);
-    return [];
+    throw error;
   }
 };
 
-// Get journal summary
-export const getJournalSummary = async () => {
+// Function to get journal entry lines
+export const getJournalEntryLines = async (journalEntryId: string): Promise<JournalEntryLine[]> => {
   try {
-    // For now, provide mock data
+    // In a real implementation, we would fetch data from Supabase
+    console.log('Fetching journal entry lines for entry:', journalEntryId);
+    
+    // Return mock data
+    return mockJournalLines.filter(line => line.journalEntryId === journalEntryId);
+  } catch (error) {
+    console.error('Error fetching journal entry lines:', error);
+    throw error;
+  }
+};
+
+// Function to get journal summary
+export const getJournalSummary = async (): Promise<JournalSummary> => {
+  try {
+    // Calculate totals from mock data
+    const totalEntries = mockJournalEntries.length;
+    
+    const totalDebits = mockJournalLines.reduce((sum, line) => sum + line.debit, 0);
+    const totalCredits = mockJournalLines.reduce((sum, line) => sum + line.credit, 0);
+    
     return {
-      totalEntries: 25,
-      totalDebits: 45000000,
-      totalCredits: 45000000,
-      recentEntries: await getJournalEntries().then(entries => entries.slice(0, 5))
+      totalEntries,
+      totalDebits,
+      totalCredits,
+      isBalanced: totalDebits === totalCredits
     };
-  } catch (error: any) {
-    toast.error(`Error fetching journal summary: ${error.message}`);
+  } catch (error) {
     console.error('Error fetching journal summary:', error);
-    return {
-      totalEntries: 0,
-      totalDebits: 0,
-      totalCredits: 0,
-      recentEntries: []
+    throw error;
+  }
+};
+
+// Create journal entry function
+export const createJournalEntry = async (entry: {
+  date: string;
+  description: string;
+  entryNumber: string;
+  isPosted: boolean;
+}): Promise<JournalEntry> => {
+  try {
+    console.log('Creating journal entry:', entry);
+    
+    // In real implementation, insert into Supabase
+    const newEntry: JournalEntry = {
+      id: Math.random().toString(36).substring(2, 11),
+      ...entry,
+      createdAt: new Date().toISOString(),
+      createdBy: 'current-user',
+      updatedAt: new Date().toISOString()
     };
+    
+    // Add to mock data (would be database in real implementation)
+    mockJournalEntries.push(newEntry);
+    
+    return newEntry;
+  } catch (error) {
+    console.error('Error creating journal entry:', error);
+    throw error;
+  }
+};
+
+// Delete journal entry function
+export const deleteJournalEntry = async (id: string): Promise<void> => {
+  try {
+    console.log('Deleting journal entry:', id);
+    
+    // In real implementation, delete from Supabase
+    const entryIndex = mockJournalEntries.findIndex(entry => entry.id === id);
+    
+    if (entryIndex >= 0) {
+      mockJournalEntries.splice(entryIndex, 1);
+      
+      // Also remove associated lines
+      const linesToRemove = mockJournalLines.filter(line => line.journalEntryId === id);
+      linesToRemove.forEach(line => {
+        const lineIndex = mockJournalLines.findIndex(l => l.id === line.id);
+        if (lineIndex >= 0) {
+          mockJournalLines.splice(lineIndex, 1);
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting journal entry:', error);
+    throw error;
+  }
+};
+
+// Create journal entry line function
+export const createJournalEntryLine = async (line: {
+  journalEntryId: string;
+  accountId: string;
+  description: string;
+  debit: number;
+  credit: number;
+}): Promise<JournalEntryLine> => {
+  try {
+    console.log('Creating journal entry line:', line);
+    
+    // In real implementation, insert into Supabase
+    const newLine: JournalEntryLine = {
+      id: Math.random().toString(36).substring(2, 11),
+      ...line,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Add to mock data (would be database in real implementation)
+    mockJournalLines.push(newLine);
+    
+    return newLine;
+  } catch (error) {
+    console.error('Error creating journal entry line:', error);
+    throw error;
   }
 };

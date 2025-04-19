@@ -1,7 +1,7 @@
 
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/auth/AuthContext';
+import { AuthContext } from '@/contexts/auth/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -30,14 +30,12 @@ const Expenses = lazy(() => import('@/pages/Expenses'));
 const ChartOfAccounts = lazy(() => import('@/pages/ChartOfAccounts'));
 const Reports = lazy(() => import('@/pages/Reports'));
 const Login = lazy(() => import('@/pages/Login'));
-const Register = lazy(() => import('@/pages/Register'));
-const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthContext.Provider>
         <Router>
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Memuat...</div>}>
             <Routes>
@@ -53,14 +51,12 @@ function App() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/tax-reports" element={<TaxReports />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </Router>
         <Toaster />
-      </AuthProvider>
+      </AuthContext.Provider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

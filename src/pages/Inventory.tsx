@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -25,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -33,7 +33,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,6 +48,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Trash2, AlertTriangle, ShoppingCart, Plus, Package, FileText, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { InventoryItem, InventoryTransaction, InventorySummary } from '@/types/inventory';
+import { convertToFoodInventoryItem, convertFromFoodInventoryItem } from '@/types/common-inventory';
 import { getInventoryItems, getInventorySummary, createInventoryItem, updateInventoryItem, deleteInventoryItem, createInventoryTransaction } from '@/services/inventoryService';
 
 const Inventory: React.FC = () => {
@@ -132,7 +132,7 @@ const Inventory: React.FC = () => {
 
   // Update item mutation
   const updateItemMutation = useMutation({
-    mutationFn: (item: InventoryItem) => updateInventoryItem(item),
+    mutationFn: (item: any) => updateInventoryItem(convertFromFoodInventoryItem(item)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       queryClient.invalidateQueries({ queryKey: ['inventorySummary'] });
