@@ -35,6 +35,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { CalendarIcon, Download, FileText, Plus, Printer, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getTaxReports } from '@/services/taxService';
@@ -58,6 +64,7 @@ const TaxReports: React.FC = () => {
     to: new Date(),
   });
   const [isNewReportDialogOpen, setIsNewReportDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'daily' | 'monthly' | 'yearly'>('all');
 
   // Fetch tax reports
   const {
@@ -99,6 +106,21 @@ const TaxReports: React.FC = () => {
       report.taxFormNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.taxpayerIdNumber?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Filter reports based on tab
+  const filteredReportsByTab = filteredReports.filter((report) => {
+    if (activeTab === 'all') return true;
+    
+    const startDate = new Date(report.periodStart);
+    const endDate = new Date(report.periodEnd);
+    const dayDifference = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+    
+    if (activeTab === 'daily') return dayDifference <= 1;
+    if (activeTab === 'monthly') return dayDifference > 1 && dayDifference <= 31;
+    if (activeTab === 'yearly') return dayDifference > 31;
+    
+    return true;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -199,7 +221,7 @@ const TaxReports: React.FC = () => {
                   <SelectValue placeholder="Pilih jenis pajak" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Jenis</SelectItem>
+                  <SelectItem value="all">Semua Jenis</SelectItem>
                   <SelectItem value="vat">PPN</SelectItem>
                   <SelectItem value="income">PPh Badan</SelectItem>
                   <SelectItem value="withholding">PPh 21/23/26</SelectItem>
@@ -269,67 +291,77 @@ const TaxReports: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nomor Referensi</TableHead>
-                  <TableHead>Jenis Pajak</TableHead>
-                  <TableHead>Nomor Form</TableHead>
-                  <TableHead>Periode</TableHead>
-                  <TableHead>Jatuh Tempo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Jumlah Pajak</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6">
-                      Memuat data...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredReports.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6">
-                      Tidak ditemukan data laporan pajak. Ubah filter atau periode untuk melihat data.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredReports.map((report: TaxReport) => (
-                    <TableRow key={report.id}>
-                      <TableCell>
-                        {report.referenceNumber || '-'}
-                      </TableCell>
-                      <TableCell>{getReportTypeName(report.reportType as TaxReportType)}</TableCell>
-                      <TableCell>{report.taxFormNumber || '-'}</TableCell>
-                      <TableCell>
-                        {format(new Date(report.periodStart), 'dd MMM yyyy', { locale: id })} -{' '}
-                        {format(new Date(report.periodEnd), 'dd MMM yyyy', { locale: id })}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(report.dueDate), 'dd MMM yyyy', { locale: id })}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(report.status)}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(report.totalTaxAmount)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="ghost" size="icon">
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'daily' | 'monthly' | 'yearly')}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">Semua Laporan</TabsTrigger>
+              <TabsTrigger value="daily">Harian</TabsTrigger>
+              <TabsTrigger value="monthly">Bulanan</TabsTrigger>
+              <TabsTrigger value="yearly">Tahunan</TabsTrigger>
+            </TabsList>
+            <TabsContent value={activeTab}>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nomor Referensi</TableHead>
+                      <TableHead>Jenis Pajak</TableHead>
+                      <TableHead>Nomor Form</TableHead>
+                      <TableHead>Periode</TableHead>
+                      <TableHead>Jatuh Tempo</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Jumlah Pajak</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6">
+                          Memuat data...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredReportsByTab.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6">
+                          Tidak ditemukan data laporan pajak. Ubah filter atau periode untuk melihat data.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredReportsByTab.map((report: TaxReport) => (
+                        <TableRow key={report.id}>
+                          <TableCell>
+                            {report.referenceNumber || '-'}
+                          </TableCell>
+                          <TableCell>{getReportTypeName(report.reportType as TaxReportType)}</TableCell>
+                          <TableCell>{report.taxFormNumber || '-'}</TableCell>
+                          <TableCell>
+                            {format(new Date(report.periodStart), 'dd MMM yyyy', { locale: id })} -{' '}
+                            {format(new Date(report.periodEnd), 'dd MMM yyyy', { locale: id })}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(report.dueDate), 'dd MMM yyyy', { locale: id })}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(report.status)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(report.totalTaxAmount)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button variant="ghost" size="icon">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
         <CardFooter className="flex justify-between">
           <p className="text-sm text-muted-foreground">
-            Menampilkan {filteredReports.length} laporan pajak
+            Menampilkan {filteredReportsByTab.length} laporan pajak
           </p>
         </CardFooter>
       </Card>

@@ -12,7 +12,7 @@ export interface BaseInventoryItem {
   unitPrice: number;
   costPrice: number;
   minimumStock: number; // Changed from optional to required to match food-manufacturing.ts
-  isActive?: boolean;
+  isActive: boolean; // Changed from optional to required to match food-manufacturing.ts
   createdAt: string;
   updatedAt: string;
 }
@@ -30,7 +30,7 @@ export interface InventoryItem {
   unitPrice: number;
   costPrice: number;
   minimumStock: number; // Changed from optional to required to match food-manufacturing.ts
-  isActive?: boolean;
+  isActive: boolean; // Changed from optional to required to match food-manufacturing.ts
   createdAt: string;
   updatedAt: string;
 }
@@ -51,7 +51,7 @@ export const convertToFoodInventoryItem = (item: BaseInventoryItem): InventoryIt
     costPrice: item.costPrice,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
-    isActive: item.isActive !== undefined ? item.isActive : true
+    isActive: item.isActive
   };
 };
 
@@ -66,7 +66,7 @@ export const convertFromFoodInventoryItem = (item: InventoryItem): BaseInventory
     unitPrice: item.unitPrice,
     costPrice: item.costPrice,
     minimumStock: item.minimumStock,
-    isActive: item.isActive !== undefined ? item.isActive : true,
+    isActive: item.isActive,
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || new Date().toISOString()
   };

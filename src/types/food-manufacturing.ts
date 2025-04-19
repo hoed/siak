@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -197,11 +198,15 @@ export interface InventoryItem {
   itemId: string;
   name: string;
   sku: string;
+  description?: string;
   category: string;
   quantity: number;
   minimumStock: number;
   unitPrice: number;
+  costPrice: number;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LedgerAccount {
