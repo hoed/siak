@@ -1,7 +1,7 @@
 
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { AuthContext } from '@/contexts/auth/AuthContext';
+import { AuthProvider } from '@/contexts/auth';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -37,7 +37,7 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ user: null, loading: false }}>
+      <AuthProvider>
         <Router>
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Memuat...</div>}>
             <Routes>
@@ -60,7 +60,7 @@ function App() {
           </Suspense>
         </Router>
         <Toaster />
-      </AuthContext.Provider>
+      </AuthProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -83,15 +82,20 @@ const Inventory: React.FC = () => {
 
   // Create item mutation
   const createMutation = useMutation({
-    mutationFn: createInventoryItem,
+    mutationFn: (newItem: BaseInventoryItem) => {
+      // Convert BaseInventoryItem to InventoryItem format for the API
+      const convertedItem = convertToFoodInventoryItem(newItem);
+      return createInventoryItem(convertedItem);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      toast.success('Item berhasil ditambahkan');
       setIsAddDialogOpen(false);
-      resetNewItem();
+      resetForm();
+      toast.success('Produk berhasil ditambahkan');
     },
-    onError: (error: any) => {
-      toast.error(`Gagal menambahkan item: ${error.message}`);
+    onError: (error) => {
+      console.error('Error creating item:', error);
+      toast.error('Gagal menambahkan produk');
     }
   });
 
@@ -100,12 +104,12 @@ const Inventory: React.FC = () => {
     mutationFn: updateInventoryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      toast.success('Item berhasil diperbarui');
       setIsAddDialogOpen(false);
       setSelectedItem(null);
+      toast.success('Produk berhasil diperbarui');
     },
-    onError: (error: any) => {
-      toast.error(`Gagal memperbarui item: ${error.message}`);
+    onError: (error) => {
+      toast.error(`Gagal memperbarui produk: ${error.message}`);
     }
   });
 
@@ -114,11 +118,11 @@ const Inventory: React.FC = () => {
     mutationFn: deleteInventoryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
-      toast.success('Item berhasil dihapus');
       setIsDeleteDialogOpen(false);
+      toast.success('Produk berhasil dihapus');
     },
-    onError: (error: any) => {
-      toast.error(`Gagal menghapus item: ${error.message}`);
+    onError: (error) => {
+      toast.error(`Gagal menghapus produk: ${error.message}`);
     }
   });
 
@@ -199,7 +203,7 @@ const Inventory: React.FC = () => {
     }
   };
 
-  const resetNewItem = () => {
+  const resetForm = () => {
     setNewItem({
       name: '',
       sku: '',
@@ -254,7 +258,7 @@ const Inventory: React.FC = () => {
           </Button>
           <Button onClick={() => {
             setSelectedItem(null);
-            resetNewItem();
+            resetForm();
             setIsAddDialogOpen(true);
           }}>
             <Plus className="mr-2 h-4 w-4" />
@@ -514,7 +518,7 @@ const Inventory: React.FC = () => {
               onClick={() => {
                 setIsAddDialogOpen(false);
                 setSelectedItem(null);
-                resetNewItem();
+                resetForm();
               }}
             >
               Batal

@@ -56,53 +56,52 @@ const Sidebar: React.FC = () => {
   };
 
   const sidebarClasses = cn(
-    'sidebar h-screen flex flex-col border-r border-sidebar-border transition-all duration-300',
+    'sidebar h-screen flex flex-col border-r border-gray-200 transition-all duration-300 bg-blue-500 text-white',
     isOpen ? 'w-64' : 'w-16',
     isMobile && isOpen ? 'fixed z-40 shadow-xl' : '',
     isMobile && !isOpen ? 'w-0 border-none' : ''
   );
 
+  // If there's no user yet, show a default sidebar with limited options
+  const filteredItems = user 
+    ? navigationItems.filter(item => user.role && item.role.includes(user.role)) 
+    : navigationItems.filter(item => item.path === '/dashboard' || item.path === '/login' || item.path === '/register');
+
   return (
-    <div
-      className={sidebarClasses}
-      data-sidebar="true"
-      style={{ backgroundColor: '#3399FF !important', color: '#FFFFFF !important' }}
-    >
-      <div className="flex items-center justify-between p-4">
-        {isOpen && <span className="text-lg font-semibold text-sidebar-foreground">SisKeu</span>}
+    <div className={sidebarClasses} data-sidebar="true">
+      <div className="flex items-center justify-between p-4 border-b border-blue-600">
+        {isOpen && <span className="text-lg font-semibold text-white">SisKeu</span>}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="text-white hover:bg-blue-600"
         >
           {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </Button>
       </div>
 
-      <nav className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-accent scrollbar-track-transparent">
-          <ul className="space-y-2 p-2">
-            {navigationItems
-              .filter((item) => user && item.role.includes(user.role))
-              .map((item) => (
-                <li key={item.name}>
-                  <NavLink
-                    to={item.path}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                      )
-                    }
-                  >
-                    <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
-                    {isOpen && <span>{item.name}</span>}
-                  </NavLink>
-                </li>
-              ))}
+      <nav className="flex-1 overflow-hidden pt-2">
+        <div className="h-full overflow-y-auto scrollbar-thin">
+          <ul className="space-y-1 p-2">
+            {filteredItems.map((item) => (
+              <li key={item.name}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-blue-600 text-white'
+                        : 'text-white hover:bg-blue-600'
+                    )
+                  }
+                >
+                  <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
+                  {isOpen && <span>{item.name}</span>}
+                </NavLink>
+              </li>
+            ))}
           </ul>
         </div>
       </nav>
