@@ -1,9 +1,40 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   JournalEntry, JournalEntryLine, JournalSummary, 
   JournalFilter, JournalViewPeriod 
 } from '@/types/ledger';
 import { format, subMonths, subWeeks, parseISO } from 'date-fns';
+import { ChartOfAccount } from '@/types/accounting';
+
+// Types for Ledger functionality
+export interface LedgerAccount {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  balance?: number;
+}
+
+export interface LedgerEntry {
+  id: string;
+  date: string;
+  description: string;
+  accountId: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  reference?: string;
+}
+
+export interface LedgerFilter {
+  accountId?: string;
+  dateRange?: {
+    start?: string;
+    end?: string;
+  };
+  searchQuery?: string;
+}
 
 // Mock data for development - will be replaced with real API calls
 const mockJournalEntries: JournalEntry[] = [
@@ -82,6 +113,55 @@ const mockJournalLines: JournalEntryLine[] = [
   }
 ];
 
+// Mock ledger accounts data
+const mockLedgerAccounts: LedgerAccount[] = [
+  { id: '101', code: '1001', name: 'Cash', type: 'asset' },
+  { id: '201', code: '2001', name: 'Inventory', type: 'asset' },
+  { id: '301', code: '3001', name: 'Accounts Payable', type: 'liability' },
+  { id: '401', code: '4001', name: 'Sales Revenue', type: 'revenue' },
+  { id: '610', code: '6101', name: 'Rent Expense', type: 'expense' },
+];
+
+// Mock ledger entries
+const mockLedgerEntries: LedgerEntry[] = [
+  {
+    id: '1',
+    date: '2025-04-15',
+    description: 'Initial inventory purchase',
+    accountId: '101',
+    debit: 0,
+    credit: 5000000,
+    balance: -5000000
+  },
+  {
+    id: '2',
+    date: '2025-04-15',
+    description: 'Initial inventory purchase',
+    accountId: '201',
+    debit: 5000000,
+    credit: 0,
+    balance: 5000000
+  },
+  {
+    id: '3',
+    date: '2025-04-16',
+    description: 'Monthly rent payment',
+    accountId: '101',
+    debit: 0,
+    credit: 2500000,
+    balance: -7500000
+  },
+  {
+    id: '4',
+    date: '2025-04-16',
+    description: 'Monthly rent payment',
+    accountId: '610',
+    debit: 2500000,
+    credit: 0,
+    balance: 2500000
+  }
+];
+
 // Function to get journal entries
 export const getJournalEntries = async (filter?: JournalFilter): Promise<JournalEntry[]> => {
   try {
@@ -132,7 +212,7 @@ export const getJournalSummary = async (): Promise<JournalSummary> => {
       totalEntries,
       totalDebits,
       totalCredits,
-      isBalanced: totalDebits === totalCredits
+      recentEntries: mockJournalEntries.slice(0, 3)
     };
   } catch (error) {
     console.error('Error fetching journal summary:', error);
@@ -220,6 +300,65 @@ export const createJournalEntryLine = async (line: {
     return newLine;
   } catch (error) {
     console.error('Error creating journal entry line:', error);
+    throw error;
+  }
+};
+
+// Function to get ledger accounts
+export const getLedgerAccounts = async (): Promise<LedgerAccount[]> => {
+  try {
+    // In a real implementation, we would fetch data from Supabase
+    console.log('Fetching ledger accounts');
+    
+    // Return mock data
+    return mockLedgerAccounts;
+  } catch (error) {
+    console.error('Error fetching ledger accounts:', error);
+    throw error;
+  }
+};
+
+// Function to get ledger entries
+export const getLedgerEntries = async (filter?: LedgerFilter): Promise<LedgerEntry[]> => {
+  try {
+    // In a real implementation, we would fetch data from Supabase
+    console.log('Fetching ledger entries with filter:', filter);
+    
+    // Filter entries based on the provided filter
+    let filteredEntries = [...mockLedgerEntries];
+    
+    if (filter?.accountId) {
+      filteredEntries = filteredEntries.filter(entry => entry.accountId === filter.accountId);
+    }
+    
+    if (filter?.dateRange?.start || filter?.dateRange?.end) {
+      filteredEntries = filteredEntries.filter(entry => {
+        const entryDate = entry.date;
+        
+        if (filter.dateRange?.start && filter.dateRange?.end) {
+          return entryDate >= filter.dateRange.start && entryDate <= filter.dateRange.end;
+        } else if (filter.dateRange?.start) {
+          return entryDate >= filter.dateRange.start;
+        } else if (filter.dateRange?.end) {
+          return entryDate <= filter.dateRange.end;
+        }
+        
+        return true;
+      });
+    }
+    
+    if (filter?.searchQuery) {
+      const searchLower = filter.searchQuery.toLowerCase();
+      filteredEntries = filteredEntries.filter(entry => 
+        entry.description.toLowerCase().includes(searchLower) || 
+        mockLedgerAccounts.find(acc => acc.id === entry.accountId)?.name.toLowerCase().includes(searchLower) ||
+        mockLedgerAccounts.find(acc => acc.id === entry.accountId)?.code.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return filteredEntries;
+  } catch (error) {
+    console.error('Error fetching ledger entries:', error);
     throw error;
   }
 };
