@@ -137,7 +137,7 @@ const Ledger: React.FC = () => {
                   <SelectValue placeholder="Pilih akun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Akun</SelectItem>
+                  <SelectItem value="all">Semua Akun</SelectItem>
                   {accounts.map((account: LedgerAccount) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.code} - {account.name}
