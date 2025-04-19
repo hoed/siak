@@ -1,6 +1,6 @@
 # 📊 SIAK — Sistem Informasi Akuntansi Keuangan
 
-**SIAK** adalah sistem akuntansi keuangan profesional berbasis web yang dibangun menggunakan [Vite](https://vitejs.dev/) dan dapat dengan mudah di-deploy di [Vercel](https://vercel.com). Dirancang untuk bisnis kecil maupun pengelolaan keuangan pribadi, SIAK menyediakan alat lengkap untuk pencatatan transaksi, pelaporan keuangan, dan manajemen akun dengan fokus pada akurasi dan kemudahan penggunaan.
+**SIAK** adalah sistem akuntansi keuangan profesional berbasis web yang dibangun menggunakan [Vite](https://vitejs.dev/) dan dapat dengan mudah di-deploy di [Vercel](https://vercel.com). Dirancang untuk bisnis manufaktur makanan dan minuman, SIAK menyediakan alat lengkap untuk pencatatan transaksi, pelaporan keuangan, dan manajemen akun dengan fokus pada akurasi dan kemudahan penggunaan.
 
 🔗 **Demo Langsung**: [https://sikeu.vercel.app](https://sikeu.vercel.app)  
 🔗 **GitHub**: [https://github.com/hoed/siak](https://github.com/hoed/siak)
@@ -19,7 +19,6 @@
 - 👤 **Manajemen Pengguna** — Kelola profil pengguna dan hak akses.
 - 🛡️ **Akses Berbasis Peran** — Administrator dan Manajemen untuk kontrol yang aman.
 - 📅 **Filter Laporan Keuangan** — Laporan harian, mingguan, dan bulanan.
-- 🗂️ **Filter Berdasarkan Kategori** — Analisis berdasarkan kategori transaksi.
 - 🔁 **Arus Kas** — Pantau uang masuk dan keluar.
 - 🔑 **Manajemen Kata Sandi** — Update password secara aman.
 - 📆 **Dashboard Ringkasan** — Ringkasan harian, bulanan, dan tahunan.
