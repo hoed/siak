@@ -37,8 +37,8 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Memuat...</div>}>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" />} />
@@ -58,10 +58,10 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-        </Router>
-        <Toaster />
-      </AuthProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
+          <Toaster />
+        </AuthProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </Router>
     </QueryClientProvider>
   );
 }
