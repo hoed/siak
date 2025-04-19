@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,7 @@ import {
   Layers,
   Package,
   PieChart,
+  Receipt,
   Settings,
   TrendingDown,
   TrendingUp,
@@ -30,11 +32,13 @@ const navigationItems = [
   { name: 'Pengeluaran', path: '/expenses', icon: TrendingDown, role: ['user', 'admin', 'manager', 'accountant'] },
   { name: 'Transaksi', path: '/transactions', icon: FileText, role: ['user', 'admin', 'manager', 'accountant'] },
   { name: 'Jurnal', path: '/journals', icon: BookOpen, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Buku Besar', path: '/ledger', icon: BookOpen, role: ['admin', 'manager', 'accountant'] },
   { name: 'Inventaris', path: '/inventory', icon: Package, role: ['admin', 'manager', 'accountant'] },
   { name: 'Utang', path: '/debts', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
   { name: 'Piutang', path: '/receivables', icon: CreditCard, role: ['admin', 'manager', 'accountant'] },
   { name: 'Akun', path: '/accounts', icon: Layers, role: ['admin', 'manager', 'accountant'] },
   { name: 'Laporan', path: '/reports', icon: BarChart2, role: ['admin', 'manager', 'accountant'] },
+  { name: 'Laporan Pajak', path: '/tax-reports', icon: Receipt, role: ['admin', 'manager', 'accountant'] },
   { name: 'Kategori', path: '/categories', icon: Calendar, role: ['admin', 'manager', 'accountant'] },
   { name: 'Pengguna', path: '/users', icon: UserCog, role: ['admin'] },
   { name: 'Pelanggan', path: '/customers', icon: Users, role: ['admin', 'manager', 'accountant'] },
@@ -52,7 +56,7 @@ const Sidebar: React.FC = () => {
   };
 
   const sidebarClasses = cn(
-    'sidebar h-screen flex flex-col border-r border-sidebar-border transition-all duration-300 overflow-hidden',
+    'sidebar h-screen flex flex-col border-r border-sidebar-border transition-all duration-300',
     isOpen ? 'w-64' : 'w-16',
     isMobile && isOpen ? 'fixed z-40 shadow-xl' : '',
     isMobile && !isOpen ? 'w-0 border-none' : ''
@@ -76,29 +80,31 @@ const Sidebar: React.FC = () => {
         </Button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto">
-        <ul className="space-y-2 p-2">
-          {navigationItems
-            .filter((item) => user && item.role.includes(user.role))
-            .map((item) => (
-              <li key={item.name}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                    )
-                  }
-                >
-                  <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
-                  {isOpen && <span>{item.name}</span>}
-                </NavLink>
-              </li>
-            ))}
-        </ul>
+      <nav className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-accent scrollbar-track-transparent">
+          <ul className="space-y-2 p-2">
+            {navigationItems
+              .filter((item) => user && item.role.includes(user.role))
+              .map((item) => (
+                <li key={item.name}>
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                      )
+                    }
+                  >
+                    <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
+                    {isOpen && <span>{item.name}</span>}
+                  </NavLink>
+                </li>
+              ))}
+          </ul>
+        </div>
       </nav>
     </div>
   );
