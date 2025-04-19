@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -46,6 +47,7 @@ import {
 import { toast } from 'sonner';
 import { getInventoryItems, updateInventoryItem, deleteInventoryItem, createInventoryItem } from '@/services/inventoryService';
 import { BaseInventoryItem, InventoryItem, convertToFoodInventoryItem, convertFromFoodInventoryItem } from '@/types/common-inventory';
+import { InventoryItemType as FoodInventoryItemType } from '@/types/food-manufacturing';
 
 type InventoryItemType = 'all' | 'product' | 'ingredient' | 'asset';
 
@@ -151,7 +153,7 @@ const Inventory: React.FC = () => {
       name: newItem.name || '',
       sku: newItem.sku || '',
       description: newItem.description || '',
-      category: newItem.category || '',
+      category: newItem.category || 'Produk', // Default to 'Produk' if category is not specified
       quantity: Number(newItem.quantity) || 0,
       unitPrice: Number(newItem.unitPrice) || 0,
       costPrice: Number(newItem.costPrice) || 0,

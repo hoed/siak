@@ -1,4 +1,3 @@
-
 import { inventoryClient } from '@/integrations/supabase/inventory-client';
 import { toast } from 'sonner';
 import { InventoryItem, Product, Ingredient, Asset } from '@/types/food-manufacturing';
@@ -255,11 +254,14 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
       itemId: product.id,
       name: product.name,
       sku: product.sku,
-      category: product.category,
+      category: product.category || 'Produk',
       quantity: product.quantity,
       minimumStock: product.minimumStock,
       unitPrice: product.unitPrice,
-      isActive: product.isActive
+      costPrice: product.costPrice || 0,
+      isActive: product.isActive,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt
     }));
 
     const ingredientItems: InventoryItem[] = mockIngredients.map(ingredient => ({
@@ -272,7 +274,10 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
       quantity: ingredient.quantity,
       minimumStock: ingredient.minimumStock,
       unitPrice: ingredient.unitPrice,
-      isActive: ingredient.isActive
+      costPrice: ingredient.unitPrice,
+      isActive: ingredient.isActive,
+      createdAt: ingredient.createdAt,
+      updatedAt: ingredient.updatedAt
     }));
 
     const assetItems: InventoryItem[] = mockAssets.map(asset => ({
@@ -285,7 +290,10 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
       quantity: 1,
       minimumStock: 0,
       unitPrice: asset.currentValue,
-      isActive: asset.status === 'active'
+      costPrice: asset.purchasePrice,
+      isActive: asset.status === 'active',
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt
     }));
 
     return [...productItems, ...ingredientItems, ...assetItems];
@@ -437,22 +445,26 @@ export const getInventorySummary = async () => {
 };
 
 // Create inventory item - Simplified for now, would need to be expanded for different item types
-export const createInventoryItem = async (item: any): Promise<InventoryItem | null> => {
+export const createInventoryItem = async (item: InventoryItem): Promise<InventoryItem | null> => {
   try {
     // Mock creating item - would be replaced with actual database operations
     toast.success('Item inventaris berhasil ditambahkan');
     
     return {
       id: `${Date.now()}`,
-      itemType: 'product',
+      itemType: item.itemType,
       itemId: `${Date.now()}`,
       name: item.name,
       sku: item.sku,
-      category: item.category,
+      category: item.category || 'Produk',
+      description: item.description,
       quantity: item.quantity,
       minimumStock: item.minimumStock,
       unitPrice: item.unitPrice,
-      isActive: true
+      costPrice: item.costPrice,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
   } catch (error: any) {
     toast.error(`Error creating inventory item: ${error.message}`);

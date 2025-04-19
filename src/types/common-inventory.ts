@@ -7,7 +7,7 @@ export interface BaseInventoryItem {
   name: string;
   sku: string;
   description?: string;
-  category?: string;
+  category: string; // Changed from optional to required to match food-manufacturing.ts
   quantity: number;
   unitPrice: number;
   costPrice: number;
@@ -25,7 +25,7 @@ export interface InventoryItem {
   name: string;
   sku: string;
   description?: string;
-  category?: string;
+  category: string; // Changed from optional to required to match food-manufacturing.ts
   quantity: number;
   unitPrice: number;
   costPrice: number;
@@ -44,7 +44,7 @@ export const convertToFoodInventoryItem = (item: BaseInventoryItem): InventoryIt
     name: item.name,
     sku: item.sku,
     description: item.description || '',
-    category: item.category || '',
+    category: item.category, // Category is now required
     quantity: item.quantity,
     minimumStock: item.minimumStock || 0,
     unitPrice: item.unitPrice,
@@ -61,7 +61,7 @@ export const convertFromFoodInventoryItem = (item: InventoryItem): BaseInventory
     name: item.name,
     sku: item.sku,
     description: item.description || '',
-    category: item.category || '',
+    category: item.category, // Category is now required
     quantity: item.quantity,
     unitPrice: item.unitPrice,
     costPrice: item.costPrice,
