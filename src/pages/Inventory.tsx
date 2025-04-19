@@ -96,7 +96,7 @@ const Inventory: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: updateInventoryItem,
+    mutationFn: (item: InventoryItem) => updateInventoryItem(item),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       setIsAddDialogOpen(false);

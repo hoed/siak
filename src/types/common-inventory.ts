@@ -1,4 +1,6 @@
 
+import { InventoryItemType } from './food-manufacturing';
+
 // Common interface to resolve conflicts between different inventory item types
 export interface BaseInventoryItem {
   id: string;
@@ -18,7 +20,7 @@ export interface BaseInventoryItem {
 // Define an interface that conforms to the expected InventoryItem shape
 export interface InventoryItem {
   id: string;
-  itemType: string;
+  itemType: InventoryItemType;
   itemId: string;
   name: string;
   sku: string;
@@ -37,7 +39,7 @@ export interface InventoryItem {
 export const convertToFoodInventoryItem = (item: BaseInventoryItem): InventoryItem => {
   return {
     id: item.id,
-    itemType: item.category ? 'product' : 'ingredient',
+    itemType: determineItemType(item),
     itemId: item.id,
     name: item.name,
     sku: item.sku,
@@ -68,4 +70,17 @@ export const convertFromFoodInventoryItem = (item: InventoryItem): BaseInventory
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || new Date().toISOString()
   };
+};
+
+// Helper function to determine the item type based on category
+const determineItemType = (item: BaseInventoryItem): InventoryItemType => {
+  if (item.category === 'Produk') {
+    return 'product';
+  } else if (item.category === 'Bahan Baku') {
+    return 'ingredient';
+  } else if (item.category === 'Aset' || item.category === 'Aset Tetap' || item.category === 'Aset Tidak Tetap') {
+    return 'asset';
+  }
+  // Default to product if no category matches
+  return 'product';
 };
