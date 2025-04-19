@@ -69,21 +69,17 @@ const Inventory: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch inventory items
   const { data: itemsData = [], isLoading } = useQuery({
     queryKey: ['inventoryItems'],
     queryFn: getInventoryItems
   });
 
-  // Convert fetched items to BaseInventoryItem type
   const items: BaseInventoryItem[] = itemsData.map((item: any) => 
     'itemType' in item ? convertFromFoodInventoryItem(item as InventoryItem) : item
   );
 
-  // Create item mutation
   const createMutation = useMutation({
     mutationFn: (newItem: BaseInventoryItem) => {
-      // Convert BaseInventoryItem to InventoryItem format for the API
       const convertedItem = convertToFoodInventoryItem(newItem);
       return createInventoryItem(convertedItem);
     },
@@ -99,7 +95,6 @@ const Inventory: React.FC = () => {
     }
   });
 
-  // Update item mutation
   const updateMutation = useMutation({
     mutationFn: updateInventoryItem,
     onSuccess: () => {
@@ -113,7 +108,6 @@ const Inventory: React.FC = () => {
     }
   });
 
-  // Delete item mutation
   const deleteMutation = useMutation({
     mutationFn: deleteInventoryItem,
     onSuccess: () => {
@@ -126,7 +120,6 @@ const Inventory: React.FC = () => {
     }
   });
 
-  // Filter items based on search query and active tab
   const filteredItems = items.filter((item: BaseInventoryItem) => {
     const matchesSearch = 
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -148,7 +141,6 @@ const Inventory: React.FC = () => {
   });
 
   const handleAddItem = () => {
-    // Validate required fields
     if (!newItem.name || !newItem.sku || !newItem.unitPrice) {
       toast.error('Harap isi semua bidang yang wajib');
       return;
@@ -170,7 +162,8 @@ const Inventory: React.FC = () => {
     };
 
     if (selectedItem) {
-      updateMutation.mutate(itemData);
+      const convertedItem = convertToFoodInventoryItem(itemData);
+      updateMutation.mutate(convertedItem);
     } else {
       createMutation.mutate(itemData);
     }
@@ -400,7 +393,6 @@ const Inventory: React.FC = () => {
         </CardFooter>
       </Card>
 
-      {/* Add/Edit Item Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -530,7 +522,6 @@ const Inventory: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
