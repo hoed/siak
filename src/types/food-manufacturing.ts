@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -169,16 +168,23 @@ export interface Asset {
   updatedAt: string;
 }
 
+export type TaxReportType = 'vat' | 'income' | 'withholding' | 'annual-return' | 'monthly-return' | 'other';
+export type TaxReportStatus = 'draft' | 'submitted' | 'verified' | 'paid' | 'rejected';
+
 export interface TaxReport {
   id: string;
-  reportType: 'sales' | 'income' | 'vat' | 'other';
+  reportType: TaxReportType;
   periodStart: string;
   periodEnd: string;
   dueDate: string;
-  status: 'draft' | 'submitted' | 'paid';
+  status: TaxReportStatus;
   totalTaxAmount: number;
   referenceNumber?: string;
+  taxOffice?: string;
+  taxFormNumber?: string;  // For specific Indonesian tax form numbers
+  taxpayerIdNumber?: string; // NPWP in Indonesia
   notes?: string;
+  attachments?: string[]; // URLs to attachment files
   createdAt: string;
   updatedAt: string;
 }

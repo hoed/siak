@@ -1,10 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { TaxReport } from '@/types/food-manufacturing';
+import { TaxReport, TaxReportType, TaxReportStatus } from '@/types/food-manufacturing';
 import { toast } from 'sonner';
 
 export interface TaxReportFilter {
-  reportType?: string;
+  reportType?: TaxReportType;
+  status?: TaxReportStatus;
   dateRange?: {
     start?: string;
     end?: string;
@@ -26,6 +27,9 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
         status: 'submitted',
         totalTaxAmount: 2500000,
         referenceNumber: 'PPN-2025-01',
+        taxOffice: 'KPP Pratama Jakarta Tebet',
+        taxFormNumber: 'SPT Masa PPN 1111',
+        taxpayerIdNumber: '01.234.567.8-123.000',
         notes: 'Laporan PPN Januari 2025',
         createdAt: '2025-02-01T08:00:00Z',
         updatedAt: '2025-02-01T08:00:00Z'
@@ -39,48 +43,60 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
         status: 'draft',
         totalTaxAmount: 5750000,
         referenceNumber: 'PPH-Q1-2025',
+        taxOffice: 'KPP Pratama Jakarta Tebet',
+        taxFormNumber: 'SPT Tahunan PPh Badan',
+        taxpayerIdNumber: '01.234.567.8-123.000',
         notes: 'Laporan PPH Q1 2025',
         createdAt: '2025-04-01T10:30:00Z',
         updatedAt: '2025-04-01T10:30:00Z'
       },
       {
         id: '3',
-        reportType: 'sales',
+        reportType: 'withholding',
         periodStart: '2024-12-01',
         periodEnd: '2024-12-31',
         dueDate: '2025-01-15',
         status: 'paid',
         totalTaxAmount: 1850000,
-        referenceNumber: 'SALES-2024-12',
-        notes: 'Laporan Pajak Penjualan Desember 2024',
+        referenceNumber: 'PPH21-2024-12',
+        taxOffice: 'KPP Pratama Jakarta Tebet',
+        taxFormNumber: 'SPT Masa PPh 21',
+        taxpayerIdNumber: '01.234.567.8-123.000',
+        notes: 'Laporan PPh 21 Desember 2024',
         createdAt: '2025-01-05T14:20:00Z',
         updatedAt: '2025-01-20T09:45:00Z'
       },
       {
         id: '4',
-        reportType: 'vat',
+        reportType: 'monthly-return',
         periodStart: '2024-12-01',
         periodEnd: '2024-12-31',
         dueDate: '2025-01-15',
         status: 'paid',
         totalTaxAmount: 2100000,
-        referenceNumber: 'PPN-2024-12',
-        notes: 'Laporan PPN Desember 2024',
+        referenceNumber: 'SPT-MASA-2024-12',
+        taxOffice: 'KPP Pratama Jakarta Tebet',
+        taxFormNumber: 'SPT Masa',
+        taxpayerIdNumber: '01.234.567.8-123.000',
+        notes: 'SPT Masa Desember 2024',
         createdAt: '2025-01-05T15:10:00Z',
         updatedAt: '2025-01-20T09:45:00Z'
       },
       {
         id: '5',
-        reportType: 'income',
-        periodStart: '2024-10-01',
+        reportType: 'annual-return',
+        periodStart: '2024-01-01',
         periodEnd: '2024-12-31',
-        dueDate: '2025-01-31',
-        status: 'paid',
-        totalTaxAmount: 4950000,
-        referenceNumber: 'PPH-Q4-2024',
-        notes: 'Laporan PPH Q4 2024',
-        createdAt: '2025-01-10T11:25:00Z',
-        updatedAt: '2025-01-29T16:30:00Z'
+        dueDate: '2025-04-30',
+        status: 'draft',
+        totalTaxAmount: 12950000,
+        referenceNumber: 'SPT-TAHUNAN-2024',
+        taxOffice: 'KPP Pratama Jakarta Tebet',
+        taxFormNumber: 'SPT Tahunan PPh Badan',
+        taxpayerIdNumber: '01.234.567.8-123.000',
+        notes: 'SPT Tahunan 2024',
+        createdAt: '2025-03-10T11:25:00Z',
+        updatedAt: '2025-03-10T11:25:00Z'
       }
     ];
 
@@ -90,6 +106,10 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
     if (filter) {
       if (filter.reportType) {
         filteredReports = filteredReports.filter(report => report.reportType === filter.reportType);
+      }
+
+      if (filter.status) {
+        filteredReports = filteredReports.filter(report => report.status === filter.status);
       }
 
       if (filter.dateRange) {
@@ -110,7 +130,9 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
         filteredReports = filteredReports.filter(
           report =>
             report.referenceNumber?.toLowerCase().includes(searchLower) ||
-            report.notes?.toLowerCase().includes(searchLower)
+            report.notes?.toLowerCase().includes(searchLower) ||
+            report.taxFormNumber?.toLowerCase().includes(searchLower) ||
+            report.taxpayerIdNumber?.toLowerCase().includes(searchLower)
         );
       }
     }
@@ -132,6 +154,10 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
         query = query.eq('report_type', filter.reportType);
       }
 
+      if (filter.status) {
+        query = query.eq('status', filter.status);
+      }
+
       if (filter.dateRange) {
         if (filter.dateRange.start) {
           query = query.gte('period_end', filter.dateRange.start);
@@ -142,7 +168,7 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
       }
 
       if (filter.searchQuery) {
-        query = query.or(`reference_number.ilike.%${filter.searchQuery}%,notes.ilike.%${filter.searchQuery}%`);
+        query = query.or(`reference_number.ilike.%${filter.searchQuery}%,notes.ilike.%${filter.searchQuery}%,tax_form_number.ilike.%${filter.searchQuery}%,taxpayer_id_number.ilike.%${filter.searchQuery}%`);
       }
     }
 
@@ -159,7 +185,11 @@ export const getTaxReports = async (filter?: TaxReportFilter): Promise<TaxReport
       status: item.status,
       totalTaxAmount: item.total_tax_amount,
       referenceNumber: item.reference_number,
+      taxOffice: item.tax_office,
+      taxFormNumber: item.tax_form_number,
+      taxpayerIdNumber: item.taxpayer_id_number,
       notes: item.notes,
+      attachments: item.attachments,
       createdAt: item.created_at,
       updatedAt: item.updated_at
     }));
@@ -197,7 +227,11 @@ export const createTaxReport = async (report: Omit<TaxReport, 'id' | 'createdAt'
         status: report.status,
         total_tax_amount: report.totalTaxAmount,
         reference_number: report.referenceNumber,
-        notes: report.notes
+        tax_office: report.taxOffice,
+        tax_form_number: report.taxFormNumber,
+        taxpayer_id_number: report.taxpayerIdNumber,
+        notes: report.notes,
+        attachments: report.attachments
       })
       .select()
       .single();
@@ -215,7 +249,11 @@ export const createTaxReport = async (report: Omit<TaxReport, 'id' | 'createdAt'
       status: data.status,
       totalTaxAmount: data.total_tax_amount,
       referenceNumber: data.reference_number,
+      taxOffice: data.tax_office,
+      taxFormNumber: data.tax_form_number,
+      taxpayerIdNumber: data.taxpayer_id_number,
       notes: data.notes,
+      attachments: data.attachments,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -245,7 +283,11 @@ export const updateTaxReport = async (id: string, report: Partial<TaxReport>): P
     if (report.status) updatePayload.status = report.status;
     if (report.totalTaxAmount) updatePayload.total_tax_amount = report.totalTaxAmount;
     if (report.referenceNumber) updatePayload.reference_number = report.referenceNumber;
+    if (report.taxOffice) updatePayload.tax_office = report.taxOffice;
+    if (report.taxFormNumber) updatePayload.tax_form_number = report.taxFormNumber;
+    if (report.taxpayerIdNumber) updatePayload.taxpayer_id_number = report.taxpayerIdNumber;
     if (report.notes !== undefined) updatePayload.notes = report.notes;
+    if (report.attachments !== undefined) updatePayload.attachments = report.attachments;
 
     const { error } = await supabase
       .from('tax_reports')

@@ -48,11 +48,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { TaxReport } from '@/types/food-manufacturing';
+import { TaxReport, TaxReportType } from '@/types/food-manufacturing';
 
 const TaxReports: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedReportType, setSelectedReportType] = useState<string>('');
+  const [selectedReportType, setSelectedReportType] = useState<TaxReportType | ''>('');
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth() - 3, 1),
     to: new Date(),
@@ -68,7 +68,7 @@ const TaxReports: React.FC = () => {
     queryKey: ['taxReports', selectedReportType, date],
     queryFn: () =>
       getTaxReports({
-        reportType: selectedReportType || undefined,
+        reportType: selectedReportType as TaxReportType || undefined,
         dateRange: date
           ? {
               start: date.from ? format(date.from, 'yyyy-MM-dd') : undefined,
@@ -95,7 +95,9 @@ const TaxReports: React.FC = () => {
     (report) =>
       report.referenceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.reportType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.notes?.toLowerCase().includes(searchQuery.toLowerCase())
+      report.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.taxFormNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.taxpayerIdNumber?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -112,10 +114,22 @@ const TaxReports: React.FC = () => {
             Terkirim
           </span>
         );
+      case 'verified':
+        return (
+          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-600">
+            Terverifikasi
+          </span>
+        );
       case 'paid':
         return (
           <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
             Terbayar
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+            Ditolak
           </span>
         );
       default:
@@ -127,16 +141,22 @@ const TaxReports: React.FC = () => {
     }
   };
 
-  const getReportTypeName = (type: string) => {
+  const getReportTypeName = (type: TaxReportType) => {
     switch (type) {
-      case 'sales':
-        return 'Pajak Penjualan';
-      case 'income':
-        return 'Pajak Penghasilan';
       case 'vat':
         return 'PPN';
-      default:
+      case 'income':
+        return 'PPh Badan';
+      case 'withholding':
+        return 'PPh 21/23/26';
+      case 'monthly-return':
+        return 'SPT Masa';
+      case 'annual-return':
+        return 'SPT Tahunan';
+      case 'other':
         return 'Lainnya';
+      default:
+        return type;
     }
   };
 
@@ -174,15 +194,17 @@ const TaxReports: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium mb-1 block">Jenis Pajak</label>
-              <Select value={selectedReportType} onValueChange={setSelectedReportType}>
+              <Select value={selectedReportType} onValueChange={(value) => setSelectedReportType(value as TaxReportType | '')}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih jenis pajak" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Semua Jenis</SelectItem>
-                  <SelectItem value="sales">Pajak Penjualan</SelectItem>
-                  <SelectItem value="income">Pajak Penghasilan</SelectItem>
                   <SelectItem value="vat">PPN</SelectItem>
+                  <SelectItem value="income">PPh Badan</SelectItem>
+                  <SelectItem value="withholding">PPh 21/23/26</SelectItem>
+                  <SelectItem value="monthly-return">SPT Masa</SelectItem>
+                  <SelectItem value="annual-return">SPT Tahunan</SelectItem>
                   <SelectItem value="other">Lainnya</SelectItem>
                 </SelectContent>
               </Select>
@@ -228,7 +250,7 @@ const TaxReports: React.FC = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cari berdasarkan nomor referensi atau catatan"
+                  placeholder="Cari berdasarkan nomor referensi atau nomor form"
                   className="pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -253,6 +275,7 @@ const TaxReports: React.FC = () => {
                 <TableRow>
                   <TableHead>Nomor Referensi</TableHead>
                   <TableHead>Jenis Pajak</TableHead>
+                  <TableHead>Nomor Form</TableHead>
                   <TableHead>Periode</TableHead>
                   <TableHead>Jatuh Tempo</TableHead>
                   <TableHead>Status</TableHead>
@@ -263,13 +286,13 @@ const TaxReports: React.FC = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
+                    <TableCell colSpan={8} className="text-center py-6">
                       Memuat data...
                     </TableCell>
                   </TableRow>
                 ) : filteredReports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
+                    <TableCell colSpan={8} className="text-center py-6">
                       Tidak ditemukan data laporan pajak. Ubah filter atau periode untuk melihat data.
                     </TableCell>
                   </TableRow>
@@ -279,7 +302,8 @@ const TaxReports: React.FC = () => {
                       <TableCell>
                         {report.referenceNumber || '-'}
                       </TableCell>
-                      <TableCell>{getReportTypeName(report.reportType)}</TableCell>
+                      <TableCell>{getReportTypeName(report.reportType as TaxReportType)}</TableCell>
+                      <TableCell>{report.taxFormNumber || '-'}</TableCell>
                       <TableCell>
                         {format(new Date(report.periodStart), 'dd MMM yyyy', { locale: id })} -{' '}
                         {format(new Date(report.periodEnd), 'dd MMM yyyy', { locale: id })}
@@ -327,9 +351,11 @@ const TaxReports: React.FC = () => {
                     <SelectValue placeholder="Pilih jenis pajak" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sales">Pajak Penjualan</SelectItem>
-                    <SelectItem value="income">Pajak Penghasilan</SelectItem>
                     <SelectItem value="vat">PPN</SelectItem>
+                    <SelectItem value="income">PPh Badan</SelectItem>
+                    <SelectItem value="withholding">PPh 21/23/26</SelectItem>
+                    <SelectItem value="monthly-return">SPT Masa</SelectItem>
+                    <SelectItem value="annual-return">SPT Tahunan</SelectItem>
                     <SelectItem value="other">Lainnya</SelectItem>
                   </SelectContent>
                 </Select>
@@ -358,6 +384,20 @@ const TaxReports: React.FC = () => {
                 <label className="text-sm font-medium">Jumlah Pajak</label>
                 <Input type="number" placeholder="0" />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nomor Form Pajak</label>
+                <Input placeholder="Contoh: SPT Masa PPN 1111" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">NPWP</label>
+                <Input placeholder="Nomor Pokok Wajib Pajak" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">KPP Terdaftar</label>
+              <Input placeholder="Contoh: KPP Pratama Jakarta Tebet" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Catatan</label>
