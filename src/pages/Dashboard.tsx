@@ -9,6 +9,8 @@ import { getAllData } from '@/data/mockData';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatRupiah } from '@/utils/currency';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -29,6 +31,24 @@ const Dashboard: React.FC = () => {
     setData(getAllData());
   }, []);
 
+  // Custom tooltip for charts
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border p-3 rounded-md shadow-md">
+          <p className="font-medium">{label}</p>
+          <p className="text-green-600">
+            Pendapatan: {formatRupiah(payload[0].value)}
+          </p>
+          <p className="text-red-600">
+            Pengeluaran: {formatRupiah(payload[1].value)}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <MainLayout>
       <div className="pb-4">
@@ -44,43 +64,81 @@ const Dashboard: React.FC = () => {
       {/* Charts section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
-          <IncomeExpenseChart
-            monthlyData={data.monthlyChartData}
-            yearlyData={data.yearlyChartData}
-          />
+          <Card className="dashboard-card">
+            <CardHeader className="dashboard-card-header">
+              <CardTitle>Pendapatan & Pengeluaran</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="p-6">
+                <Tabs defaultValue="daily">
+                  <TabsList>
+                    <TabsTrigger value="daily">Harian</TabsTrigger>
+                    <TabsTrigger value="monthly">Bulanan</TabsTrigger>
+                    <TabsTrigger value="yearly">Tahunan</TabsTrigger>
+                  </TabsList>
+                  
+                  {/* Daily chart */}
+                  <TabsContent value="daily" className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={dailyData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="hour" />
+                        <YAxis tickFormatter={(value) => `Rp${value/1000}k`} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        <Bar name="Pendapatan" dataKey="income" fill="#4CAF50" />
+                        <Bar name="Pengeluaran" dataKey="expense" fill="#F44336" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </TabsContent>
+                  
+                  {/* Monthly chart */}
+                  <TabsContent value="monthly" className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={data.monthlyChartData} 
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="month" />
+                        <YAxis tickFormatter={(value) => `Rp${value/1000000}jt`} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        <Bar name="Pendapatan" dataKey="income" fill="#4CAF50" />
+                        <Bar name="Pengeluaran" dataKey="expense" fill="#F44336" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </TabsContent>
+                  
+                  {/* Yearly chart */}
+                  <TabsContent value="yearly" className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={data.yearlyChartData} 
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="year" />
+                        <YAxis tickFormatter={(value) => `Rp${value/1000000}jt`} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        <Bar name="Pendapatan" dataKey="income" fill="#4CAF50" />
+                        <Bar name="Pengeluaran" dataKey="expense" fill="#F44336" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         <div>
           <DashboardCalendar transactions={data.transactions} />
         </div>
       </div>
-
-      {/* Daily activity chart */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Aktivitas Hari Ini</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={dailyData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="hour" />
-                <YAxis tickFormatter={(value) => `Rp${value/1000}k`} />
-                <Tooltip 
-                  formatter={(value) => [`Rp${value.toLocaleString('id-ID')}`, '']}
-                  labelFormatter={(label) => `Jam ${label}`}
-                />
-                <Legend />
-                <Bar name="Pendapatan" dataKey="income" fill="#4CAF50" />
-                <Bar name="Pengeluaran" dataKey="expense" fill="#F44336" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Recent transactions */}
       <div className="mb-6">
@@ -104,7 +162,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Kepada {debt.personName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-finance-expense">Rp{debt.amount.toLocaleString('id-ID')}</p>
+                  <p className="font-medium text-finance-expense">{formatRupiah(debt.amount)}</p>
                   <p className="text-xs text-muted-foreground">
                     {debt.dueDate ? new Date(debt.dueDate).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
                   </p>
@@ -128,7 +186,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Dari {receivable.personName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-finance-income">Rp{receivable.amount.toLocaleString('id-ID')}</p>
+                  <p className="font-medium text-finance-income">{formatRupiah(receivable.amount)}</p>
                   <p className="text-xs text-muted-foreground">
                     {receivable.dueDate ? new Date(receivable.dueDate).toLocaleDateString('id-ID') : 'Tanpa tanggal'}
                   </p>

@@ -1,49 +1,45 @@
 
 import React from 'react';
-import { ArrowUpCircle, ArrowDownCircle, DollarSign, Calendar } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, BadgeIndianRupee, Calendar } from 'lucide-react';
 import { FinancialSummary } from '../../types/finance';
+import { formatRupiah } from '@/utils/currency';
 
 interface DashboardStatsProps {
   summary: FinancialSummary;
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({ summary }) => {
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  });
-
   const stats = [
     {
-      title: 'Total Income',
+      title: 'Total Pendapatan',
       icon: <ArrowUpCircle size={24} />,
-      value: formatter.format(summary.totalIncome.month),
-      change: '+5.2%',
-      period: 'This Month',
+      value: formatRupiah(summary.totalIncome.month),
+      change: '+5,2%',
+      period: 'Bulan Ini',
       color: 'bg-finance-income',
     },
     {
-      title: 'Total Expenses',
+      title: 'Total Pengeluaran',
       icon: <ArrowDownCircle size={24} />,
-      value: formatter.format(summary.totalExpense.month),
-      change: '-2.1%',
-      period: 'This Month',
+      value: formatRupiah(summary.totalExpense.month),
+      change: '-2,1%',
+      period: 'Bulan Ini',
       color: 'bg-finance-expense',
     },
     {
-      title: 'Balance',
-      icon: <DollarSign size={24} />,
-      value: formatter.format(summary.balance),
-      change: '+3.5%',
-      period: 'Current Balance',
+      title: 'Saldo',
+      icon: <BadgeIndianRupee size={24} />,
+      value: formatRupiah(summary.balance),
+      change: '+3,5%',
+      period: 'Saldo Saat Ini',
       color: 'bg-finance-neutral',
     },
     {
-      title: 'Upcoming Payments',
+      title: 'Pembayaran Akan Datang',
       icon: <Calendar size={24} />,
-      value: formatter.format(summary.upcomingDebts.reduce((acc, debt) => acc + debt.amount, 0)),
+      value: formatRupiah(summary.upcomingDebts.reduce((acc, debt) => acc + debt.amount, 0)),
       change: '',
-      period: 'Due this week',
+      period: 'Jatuh tempo minggu ini',
       color: 'bg-finance-debt',
     },
   ];

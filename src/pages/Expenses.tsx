@@ -36,7 +36,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Search, Filter, Trash2, Edit, Calendar, DollarSign } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { PlusCircle, Search, Filter, Trash2, Edit, Calendar, BadgeIndianRupee, Plus, Minus } from 'lucide-react';
+import { formatRupiah } from '@/utils/currency';
 
 const dummyExpenses = [
   {
@@ -45,6 +47,8 @@ const dummyExpenses = [
     description: 'Pembayaran gaji karyawan',
     category: 'Gaji',
     amount: 5000000,
+    supplier: '',
+    items: []
   },
   {
     id: '2',
@@ -52,6 +56,8 @@ const dummyExpenses = [
     description: 'Pembayaran sewa kantor',
     category: 'Sewa',
     amount: 3500000,
+    supplier: '',
+    items: []
   },
   {
     id: '3',
@@ -59,6 +65,10 @@ const dummyExpenses = [
     description: 'Pembelian alat tulis kantor',
     category: 'Perlengkapan',
     amount: 450000,
+    supplier: 'PT Maju Stationery',
+    items: [
+      { name: 'Kertas HVS A4', quantity: 10, price: 45000 }
+    ]
   },
   {
     id: '4',
@@ -66,6 +76,8 @@ const dummyExpenses = [
     description: 'Pembayaran tagihan listrik',
     category: 'Utilitas',
     amount: 750000,
+    supplier: 'PLN',
+    items: []
   },
   {
     id: '5',
@@ -73,6 +85,8 @@ const dummyExpenses = [
     description: 'Pembayaran tagihan internet',
     category: 'Utilitas',
     amount: 500000,
+    supplier: 'PT Internet Cepat',
+    items: []
   },
 ];
 
@@ -86,7 +100,25 @@ const categoryOptions = [
   'Lainnya',
 ];
 
+const supplierOptions = [
+  'PT Maju Stationery',
+  'PLN',
+  'PT Internet Cepat',
+  'PT Distribusi Prima',
+  'CV Supplier Utama',
+  'PT Logistik Cepat',
+];
+
+const inventoryItems = [
+  { id: '1', name: 'Kertas HVS A4', price: 45000 },
+  { id: '2', name: 'Tinta Printer', price: 85000 },
+  { id: '3', name: 'Pulpen', price: 5000 },
+  { id: '4', name: 'Amplop', price: 15000 },
+  { id: '5', name: 'Map File', price: 20000 },
+];
+
 const Expenses: React.FC = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -96,18 +128,70 @@ const Expenses: React.FC = () => {
     description: '',
     category: '',
     amount: '',
+    supplier: '',
   });
+  const [purchaseItems, setPurchaseItems] = useState<Array<{id: string, name: string, quantity: number, price: number}>>([]);
+
+  const addItem = () => {
+    setPurchaseItems([...purchaseItems, {
+      id: '',
+      name: '',
+      quantity: 1,
+      price: 0
+    }]);
+  };
+
+  const removeItem = (index: number) => {
+    const updatedItems = [...purchaseItems];
+    updatedItems.splice(index, 1);
+    setPurchaseItems(updatedItems);
+  };
+
+  const updateItem = (index: number, field: string, value: any) => {
+    const updatedItems = [...purchaseItems];
+    
+    if (field === 'id' && value) {
+      const selectedItem = inventoryItems.find(p => p.id === value);
+      if (selectedItem) {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          id: selectedItem.id,
+          name: selectedItem.name,
+          price: selectedItem.price
+        };
+      }
+    } else {
+      updatedItems[index] = {
+        ...updatedItems[index],
+        [field]: field === 'quantity' ? parseInt(value) || 0 : value
+      };
+    }
+    
+    setPurchaseItems(updatedItems);
+    
+    // Update total amount based on items
+    const totalAmount = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    setNewExpense({
+      ...newExpense,
+      amount: totalAmount.toString()
+    });
+  };
 
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         expense.category.toLowerCase().includes(searchTerm.toLowerCase());
+                         expense.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (expense.supplier && expense.supplier.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory ? expense.category === selectedCategory : true;
     return matchesSearch && matchesCategory;
   });
 
   const handleAddExpense = () => {
     if (!newExpense.date || !newExpense.description || !newExpense.category || !newExpense.amount) {
-      alert('Semua field harus diisi');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Semua field harus diisi",
+      });
       return;
     }
 
@@ -117,6 +201,12 @@ const Expenses: React.FC = () => {
       description: newExpense.description,
       category: newExpense.category,
       amount: parseFloat(newExpense.amount),
+      supplier: newExpense.supplier || '',
+      items: purchaseItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      }))
     };
 
     setExpenses([expense, ...expenses]);
@@ -125,16 +215,15 @@ const Expenses: React.FC = () => {
       description: '',
       category: '',
       amount: '',
+      supplier: '',
     });
+    setPurchaseItems([]);
     setIsAddExpenseOpen(false);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+    
+    toast({
+      title: "Berhasil!",
+      description: "Data pengeluaran berhasil ditambahkan",
+    });
   };
 
   return (
@@ -161,15 +250,15 @@ const Expenses: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Total Bulan Ini</p>
-              <p className="text-2xl font-bold">Rp 10.200.000</p>
+              <p className="text-2xl font-bold">{formatRupiah(10200000)}</p>
             </div>
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Rata-rata per Hari</p>
-              <p className="text-2xl font-bold">Rp 340.000</p>
+              <p className="text-2xl font-bold">{formatRupiah(340000)}</p>
             </div>
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Pengeluaran Terbesar</p>
-              <p className="text-2xl font-bold">Rp 5.000.000</p>
+              <p className="text-2xl font-bold">{formatRupiah(5000000)}</p>
               <p className="text-xs text-muted-foreground">Kategori: Gaji</p>
             </div>
           </div>
@@ -215,6 +304,7 @@ const Expenses: React.FC = () => {
                   <TableHead>Tanggal</TableHead>
                   <TableHead>Deskripsi</TableHead>
                   <TableHead>Kategori</TableHead>
+                  <TableHead>Pemasok</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -222,7 +312,7 @@ const Expenses: React.FC = () => {
               <TableBody>
                 {filteredExpenses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6">
+                    <TableCell colSpan={6} className="text-center py-6">
                       Tidak ada data pengeluaran yang sesuai
                     </TableCell>
                   </TableRow>
@@ -236,8 +326,9 @@ const Expenses: React.FC = () => {
                           {expense.category}
                         </span>
                       </TableCell>
+                      <TableCell>{expense.supplier || '-'}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(expense.amount)}
+                        {formatRupiah(expense.amount)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -262,7 +353,7 @@ const Expenses: React.FC = () => {
       </Card>
 
       <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>Tambah Pengeluaran Baru</DialogTitle>
             <DialogDescription>
@@ -270,68 +361,165 @@ const Expenses: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Tanggal
-              </Label>
-              <div className="col-span-3 relative">
-                <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="date"
-                  type="date"
-                  className="pl-8"
-                  value={newExpense.date}
-                  onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="date">Tanggal</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="date"
+                    type="date"
+                    className="pl-8"
+                    value={newExpense.date}
+                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="supplier">Pemasok</Label>
+                <Select
+                  value={newExpense.supplier}
+                  onValueChange={(value) => setNewExpense({ ...newExpense, supplier: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih pemasok (opsional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supplierOptions.map((supplier) => (
+                      <SelectItem key={supplier} value={supplier}>
+                        {supplier}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Deskripsi
-              </Label>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description">Deskripsi</Label>
               <Input
                 id="description"
                 placeholder="Deskripsi pengeluaran"
-                className="col-span-3"
                 value={newExpense.description}
                 onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="category" className="text-right">
-                Kategori
-              </Label>
-              <Select
-                value={newExpense.category}
-                onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Pilih kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoryOptions.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Jumlah
-              </Label>
-              <div className="col-span-3 relative">
-                <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="Jumlah pengeluaran"
-                  className="pl-8"
-                  value={newExpense.amount}
-                  onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="category">Kategori</Label>
+                <Select
+                  value={newExpense.category}
+                  onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="amount">Jumlah</Label>
+                <div className="relative">
+                  <BadgeIndianRupee className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Jumlah pengeluaran"
+                    className="pl-8"
+                    value={newExpense.amount}
+                    onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                    readOnly={purchaseItems.length > 0}
+                  />
+                </div>
+                {purchaseItems.length > 0 && (
+                  <p className="text-xs text-muted-foreground">Jumlah dihitung otomatis dari item</p>
+                )}
+              </div>
+            </div>
+
+            {/* Purchase Items section */}
+            <div className="border p-4 rounded-md mt-2">
+              <div className="flex justify-between items-center mb-4">
+                <Label>Item Pembelian</Label>
+                <Button type="button" size="sm" onClick={addItem} variant="outline">
+                  <Plus className="h-4 w-4 mr-1" /> Tambah Item
+                </Button>
+              </div>
+
+              {purchaseItems.length > 0 ? (
+                <div className="space-y-4">
+                  {purchaseItems.map((item, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-5">
+                        <Label htmlFor={`item-${index}`} className="text-xs">Item</Label>
+                        <Select
+                          value={item.id}
+                          onValueChange={(value) => updateItem(index, 'id', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih item" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventoryItems.map((invItem) => (
+                              <SelectItem key={invItem.id} value={invItem.id}>
+                                {invItem.name} - {formatRupiah(invItem.price)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`quantity-${index}`} className="text-xs">Qty</Label>
+                        <Input
+                          id={`quantity-${index}`}
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <Label htmlFor={`price-${index}`} className="text-xs">Harga</Label>
+                        <div className="relative">
+                          <BadgeIndianRupee className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id={`price-${index}`}
+                            type="number"
+                            className="pl-8"
+                            value={item.price}
+                            onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-span-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeItem(index)}
+                        >
+                          <Minus className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t flex justify-end">
+                    <p className="font-medium">Total: {formatRupiah(parseFloat(newExpense.amount) || 0)}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-center text-muted-foreground py-6">
+                  Belum ada item. Klik "Tambah Item" untuk menambahkan item yang dibeli.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

@@ -22,6 +22,7 @@ import {
   TrendingUp,
   UserCog,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -83,15 +84,24 @@ const Sidebar: React.FC = () => {
       
       <div className={sidebarClasses} data-sidebar="true">
         <div className="flex items-center justify-between p-4 border-b border-blue-600">
-          {isOpen && <span className="text-lg font-semibold text-white">SisKeu</span>}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className="text-white hover:bg-blue-600"
-          >
-            {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-          </Button>
+          {isOpen ? (
+            <div className="flex items-center">
+              <Wallet className="h-6 w-6 mr-2 text-white" />
+              <span className="text-lg font-semibold text-white">SisKeu</span>
+            </div>
+          ) : (
+            <Wallet className="h-6 w-6 text-white mx-auto" />
+          )}
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="text-white hover:bg-blue-600"
+            >
+              {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+            </Button>
+          )}
         </div>
 
         <nav className="flex-1 overflow-hidden pt-2">
