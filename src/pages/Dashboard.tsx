@@ -315,7 +315,7 @@ const Dashboard: React.FC = () => {
             all: 0
           },
           balance,
-          recentTransactions: transactions || [],
+          recentTransactions: transactions as any || [],
           upcomingDebts: formattedDebts,
           upcomingReceivables: formattedReceivables
         } as FinancialSummary;
@@ -332,12 +332,19 @@ const Dashboard: React.FC = () => {
     if (!isLoadingTransactions && !isLoadingMonthly && !isLoadingYearly && !isLoadingDaily && !isLoadingSummary) {
       const updatedData = {
         ...data,
-        transactions: transactions,
+        transactions: transactions.map(transaction => ({
+          ...transaction,
+          categoryId: transaction.categories?.id || null,
+          accountId: transaction.account_id,
+          createdBy: transaction.created_by || null,
+          createdAt: transaction.created_at,
+          updatedAt: transaction.updated_at,
+        })),
         monthlyChartData: monthlyChartData,
         yearlyChartData: yearlyChartData,
         financialSummary: financialSummary || data.financialSummary,
       };
-      setData(updatedData);
+      setData(updatedData as any);
       setDailyData(realDailyData);
     }
   }, [transactions, monthlyChartData, yearlyChartData, realDailyData, financialSummary, isLoadingTransactions, isLoadingMonthly, isLoadingYearly, isLoadingDaily, isLoadingSummary]);
