@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpCircle, ArrowDownCircle, BadgeIndianRupee, Calendar } from 'lucide-react';
@@ -157,32 +156,28 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ summary: propsSummary }
       title: 'Total Pendapatan',
       icon: <ArrowUpCircle size={24} />,
       value: formatRupiah(summary.totalIncome.month),
-      change: '+5,2%',
-      period: 'Bulan Ini',
+      description: 'Total pendapatan bulan ini', // Added description
       color: 'bg-finance-income',
     },
     {
       title: 'Total Pengeluaran',
       icon: <ArrowDownCircle size={24} />,
       value: formatRupiah(summary.totalExpense.month),
-      change: '-2,1%',
-      period: 'Bulan Ini',
+      description: 'Total pengeluaran bulan ini', // Added description
       color: 'bg-finance-expense',
     },
     {
       title: 'Saldo',
       icon: <BadgeIndianRupee size={24} />,
       value: formatRupiah(summary.balance),
-      change: '+3,5%',
-      period: 'Saldo Saat Ini',
+      description: 'Saldo saat ini', // Added description
       color: 'bg-finance-neutral',
     },
     {
       title: 'Pembayaran Akan Datang',
       icon: <Calendar size={24} />,
       value: formatRupiah(summary.upcomingDebts.reduce((acc, debt) => acc + debt.amount, 0)),
-      change: '',
-      period: `${summary.upcomingDebts.length} hutang jatuh tempo minggu ini`,
+      description: `${summary.upcomingDebts.length} hutang jatuh tempo minggu ini`, // Added description
       color: 'bg-finance-debt',
     },
   ];
@@ -195,16 +190,9 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ summary: propsSummary }
             {stat.icon}
           </div>
           <div className="info-box-content">
-            <span className="info-box-text">{stat.title}</span>
-            <span className="info-box-number">{stat.value}</span>
-            <div className="mt-1 text-xs">
-              {stat.change && (
-                <span className={stat.change.startsWith('+') ? 'text-finance-income' : 'text-finance-expense'}>
-                  {stat.change}
-                </span>
-              )}
-              <span className="text-muted-foreground ml-1">{stat.period}</span>
-            </div>
+            <div className="info-box-text">{stat.title}</div>
+            <div className="info-box-number">{stat.value}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{stat.description}</div>
           </div>
         </div>
       ))}
