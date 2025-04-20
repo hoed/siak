@@ -1,14 +1,62 @@
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowUpCircle, ArrowDownCircle, BadgeIndianRupee, Calendar } from 'lucide-react';
-import { FinancialSummary } from '../../types/finance';
 import { formatRupiah } from '@/utils/currency';
+import { supabase } from '@/integrations/supabase/client';
 
-interface DashboardStatsProps {
-  summary: FinancialSummary;
-}
+const DashboardStats: React.FC = () => {
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ['financial-summary'],
+    queryFn: async () => {
+      // Get month's income
+      const { data: monthlyIncome, error: incomeError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'income')
+        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        .lt('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString());
 
-const DashboardStats: React.FC<DashboardStatsProps> = ({ summary }) => {
+      if (incomeError) throw incomeError;
+
+      // Get month's expenses
+      const { data: monthlyExpenses, error: expenseError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'expense')
+        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        .lt('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString());
+
+      if (expenseError) throw expenseError;
+
+      // Get upcoming debts
+      const { data: upcomingDebts, error: debtsError } = await supabase
+        .from('debts')
+        .select('*')
+        .eq('is_paid', false)
+        .gte('due_date', new Date().toISOString())
+        .lte('due_date', new Date(new Date().setDate(new Date().getDate() + 7)).toISOString());
+
+      if (debtsError) throw debtsError;
+
+      const totalIncome = monthlyIncome.reduce((sum, t) => sum + t.amount, 0);
+      const totalExpense = monthlyExpenses.reduce((sum, t) => sum + t.amount, 0);
+      const balance = totalIncome - totalExpense;
+      const upcomingDebtTotal = upcomingDebts.reduce((sum, d) => sum + d.amount, 0);
+
+      return {
+        totalIncome: { month: totalIncome },
+        totalExpense: { month: totalExpense },
+        balance,
+        upcomingDebts
+      };
+    }
+  });
+
+  if (isLoading || !summary) {
+    return <div>Loading...</div>;
+  }
+
   const stats = [
     {
       title: 'Total Pendapatan',

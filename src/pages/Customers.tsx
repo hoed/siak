@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,12 +41,12 @@ import {
   Trash2, 
   Edit, 
   Eye,
-  BadgeIndianRupee
 } from 'lucide-react';
 import { Customer, CustomerInvoice } from '@/types/customer';
 import { useToast } from '@/components/ui/use-toast';
 import { formatRupiah } from '@/utils/currency';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock data
 const dummyCustomers: Customer[] = [
@@ -169,13 +169,34 @@ const Customers: React.FC = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [customers, setCustomers] = useState<Customer[]>(dummyCustomers);
-  const [invoices, setInvoices] = useState<CustomerInvoice[]>(dummyInvoices);
-  
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [isViewCustomerOpen, setIsViewCustomerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  
+
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: invoices = [], isLoading: isLoadingInvoices } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     email: '',
@@ -184,7 +205,7 @@ const Customers: React.FC = () => {
     status: 'active',
   });
 
-  const filteredCustomers = customers.filter(customer => {
+  const filteredCustomers = (customers as Customer[]).filter(customer => {
     const matchesSearch = 
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,7 +235,8 @@ const Customers: React.FC = () => {
       updated_at: new Date().toISOString(),
     };
 
-    setCustomers([customer, ...customers]);
+    // setCustomers([customer, ...customers]);
+    // TODO: implement supabase insert
     setNewCustomer({
       name: '',
       email: '',
@@ -236,7 +258,7 @@ const Customers: React.FC = () => {
   };
 
   const getCustomerInvoices = (customerId: string) => {
-    return invoices.filter(invoice => invoice.customer_id === customerId);
+    return (invoices as CustomerInvoice[]).filter(invoice => invoice.customer_id === customerId);
   };
 
   const getTotalSales = (customerId: string) => {
@@ -272,18 +294,18 @@ const Customers: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Total Pelanggan</p>
-              <p className="text-2xl font-bold">{customers.length}</p>
+              <p className="text-2xl font-bold">{customers?.length}</p>
               <p className="text-xs text-muted-foreground">
-                {customers.filter(c => c.status === 'active').length} aktif, {customers.filter(c => c.status === 'inactive').length} tidak aktif
+                {(customers as Customer[]).filter(c => c.status === 'active').length} aktif, {(customers as Customer[]).filter(c => c.status === 'inactive').length} tidak aktif
               </p>
             </div>
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Total Penjualan</p>
-              <p className="text-2xl font-bold">{formatRupiah(invoices.reduce((sum, inv) => sum + inv.total_amount, 0))}</p>
+              <p className="text-2xl font-bold">{formatRupiah((invoices as CustomerInvoice[]).reduce((sum, inv) => sum + inv.total_amount, 0))}</p>
             </div>
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Piutang Belum Dibayar</p>
-              <p className="text-2xl font-bold">{formatRupiah(invoices.reduce((sum, inv) => sum + (inv.total_amount - inv.paid_amount), 0))}</p>
+              <p className="text-2xl font-bold">{formatRupiah((invoices as CustomerInvoice[]).reduce((sum, inv) => sum + (inv.total_amount - inv.paid_amount), 0))}</p>
             </div>
           </div>
         </CardContent>
@@ -387,13 +409,13 @@ const Customers: React.FC = () => {
           </div>
         </CardContent>
         <CardFooter>
-          <p className="text-sm text-muted-foreground">Menampilkan {filteredCustomers.length} dari {customers.length} pelanggan</p>
+          <p className="text-sm text-muted-foreground">Menampilkan {filteredCustomers.length} dari {customers?.length} pelanggan</p>
         </CardFooter>
       </Card>
 
       {/* Add Customer Dialog */}
       <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="dialog-content sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle>Tambah Pelanggan Baru</DialogTitle>
             <DialogDescription>
@@ -467,7 +489,7 @@ const Customers: React.FC = () => {
 
       {/* View Customer Dialog */}
       <Dialog open={isViewCustomerOpen} onOpenChange={setIsViewCustomerOpen}>
-        <DialogContent className="sm:max-w-[650px]">
+        <DialogContent className="dialog-content sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>Detail Pelanggan</DialogTitle>
             <DialogDescription>

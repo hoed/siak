@@ -32,7 +32,7 @@ export interface CustomerInvoice {
   due_date: string;
   total_amount: number;
   paid_amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partial';
   notes?: string;
   items: InvoiceItem[];
   payment_id?: string;

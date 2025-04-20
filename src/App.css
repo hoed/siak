@@ -41,3 +41,8 @@
 .read-the-docs {
   color: #888;
 }
+
+.dialog-content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
