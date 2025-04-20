@@ -8,8 +8,8 @@ export const AppLogo: React.FC = () => {
       <div className="p-3 rounded-full bg-primary/10 mb-2">
         <Wallet className="h-8 w-8 text-primary" />
       </div>
-      <h1 className="text-3xl font-bold">Sistem Administrasi Keuangan</h1>
-      <p className="text-muted-foreground mt-2">Sistem Manajemen Keuangan</p>
+      <h1 className="text-3xl font-bold">Sistem Manajemen Keuangan</h1>
+      <p className="text-muted-foreground mt-2">PT Finance Manufaktur Indonesia</p>
     </div>
   );
 };
