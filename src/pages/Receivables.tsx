@@ -152,7 +152,7 @@ const Receivables: React.FC = () => {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('receivables')
+          .from('receivables') // <--- CHECK THIS TABLE NAME
           .select('*')
           .order('due_date', { ascending: true });
           
