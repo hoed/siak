@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -58,15 +57,15 @@ const Sidebar: React.FC = () => {
   };
 
   const sidebarClasses = cn(
-    'sidebar h-screen flex flex-col border-r border-gray-200 transition-all duration-300 bg-blue-500 text-white',
+    'sidebar h-screen flex flex-col border-r border-gray-200 transition-all duration-300 bg-blue-500 dark:bg-gray-800 text-white',
     isOpen ? 'w-64' : 'w-16',
     isMobile && isOpen ? 'fixed z-40 shadow-xl' : '',
     isMobile && !isOpen ? 'w-0 border-none' : ''
   );
 
   // If there's no user yet, show a default sidebar with limited options
-  const filteredItems = user 
-    ? navigationItems.filter(item => user.role && item.role.includes(user.role)) 
+  const filteredItems = user
+    ? navigationItems.filter(item => user.role && item.role.includes(user.role))
     : navigationItems.filter(item => item.path === '/dashboard' || item.path === '/login' || item.path === '/register');
 
   return (
@@ -81,9 +80,9 @@ const Sidebar: React.FC = () => {
           <Menu size={20} />
         </Button>
       )}
-      
+
       <div className={sidebarClasses} data-sidebar="true">
-        <div className="flex items-center justify-between p-4 border-b border-blue-600">
+        <div className="flex items-center justify-between p-4 border-b border-blue-600 dark:border-gray-700">
           {isOpen ? (
             <div className="flex items-center">
               <Wallet className="h-6 w-6 mr-2 text-white" />
@@ -129,7 +128,7 @@ const Sidebar: React.FC = () => {
           </div>
         </nav>
       </div>
-      
+
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30"
