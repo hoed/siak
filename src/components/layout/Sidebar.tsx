@@ -13,6 +13,7 @@ import {
   FileText,
   Home,
   Layers,
+  Menu,
   Package,
   PieChart,
   Receipt,
@@ -68,44 +69,64 @@ const Sidebar: React.FC = () => {
     : navigationItems.filter(item => item.path === '/dashboard' || item.path === '/login' || item.path === '/register');
 
   return (
-    <div className={sidebarClasses} data-sidebar="true">
-      <div className="flex items-center justify-between p-4 border-b border-blue-600">
-        {isOpen && <span className="text-lg font-semibold text-white">SisKeu</span>}
+    <>
+      {isMobile && (
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="text-white hover:bg-blue-600"
+          className="fixed top-4 left-4 z-50 bg-blue-500 text-white hover:bg-blue-600"
         >
-          {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+          <Menu size={20} />
         </Button>
-      </div>
-
-      <nav className="flex-1 overflow-hidden pt-2">
-        <div className="h-full overflow-y-auto scrollbar-thin">
-          <ul className="space-y-1 p-2">
-            {filteredItems.map((item) => (
-              <li key={item.name}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-white hover:bg-blue-600'
-                    )
-                  }
-                >
-                  <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
-                  {isOpen && <span>{item.name}</span>}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+      )}
+      
+      <div className={sidebarClasses} data-sidebar="true">
+        <div className="flex items-center justify-between p-4 border-b border-blue-600">
+          {isOpen && <span className="text-lg font-semibold text-white">SisKeu</span>}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            className="text-white hover:bg-blue-600"
+          >
+            {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+          </Button>
         </div>
-      </nav>
-    </div>
+
+        <nav className="flex-1 overflow-hidden pt-2">
+          <div className="h-full overflow-y-auto scrollbar-thin">
+            <ul className="space-y-1 p-2">
+              {filteredItems.map((item) => (
+                <li key={item.name}>
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center p-2 rounded-md text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-blue-600 text-white'
+                          : 'text-white hover:bg-blue-600'
+                      )
+                    }
+                  >
+                    <item.icon className={cn('h-5 w-5', isOpen ? 'mr-3' : 'mr-0')} />
+                    {isOpen && <span>{item.name}</span>}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
+      </div>
+      
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

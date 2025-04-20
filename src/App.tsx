@@ -29,6 +29,12 @@ const Income = lazy(() => import('@/pages/Income'));
 const Expenses = lazy(() => import('@/pages/Expenses'));
 const ChartOfAccounts = lazy(() => import('@/pages/ChartOfAccounts'));
 const Reports = lazy(() => import('@/pages/Reports'));
+const Categories = lazy(() => import('@/pages/Categories'));
+const Customers = lazy(() => import('@/pages/Customers'));
+const Suppliers = lazy(() => import('@/pages/Suppliers'));
+const Accounts = lazy(() => import('@/pages/Accounts'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const Users = lazy(() => import('@/pages/Users'));
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
@@ -52,6 +58,12 @@ function App() {
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/tax-reports" element={<TaxReports />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/suppliers" element={<Suppliers />} />
+              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/users" element={<Users />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
