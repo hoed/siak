@@ -122,6 +122,13 @@ const statusOptions = [
   { value: 'overdue', label: 'Terlambat' },
 ];
 
+// Define a type for customers
+type Customer = {
+  id: string;
+  name: string;
+  contact_info?: string; // Make contact_info optional
+};
+
 const Receivables: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
@@ -138,6 +145,7 @@ const Receivables: React.FC = () => {
     total_amount: '',
     is_received: false,
   });
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   const { data: customerInvoices = [], isLoading } = useQuery({
     queryKey: ['customer-invoices'],
@@ -176,11 +184,35 @@ const Receivables: React.FC = () => {
     },
   });
 
+  // Fetch customers from Supabase
+  const { data: fetchedCustomers, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('customers').select('*');
+      if (error) {
+        console.error('Error fetching customers:', error);
+        toast.error('Failed to load customers');
+        return [];
+      }
+      return data.map(customer => ({
+        id: customer.id,
+        name: customer.name,
+        contact_info: customer.phone || '', // Use phone as contact_info or default to empty string
+      })) as Customer[];
+    },
+  });
+
   useEffect(() => {
     if (customerInvoices.length > 0) {
       setReceivables(customerInvoices);
     }
   }, [customerInvoices]);
+
+  useEffect(() => {
+    if (fetchedCustomers) {
+      setCustomers(fetchedCustomers);
+    }
+  }, [fetchedCustomers]);
 
   const filteredReceivables = receivables.filter(receivable => {
     const matchesSearch = 
@@ -206,11 +238,11 @@ const Receivables: React.FC = () => {
       const { data, error } = await supabase
         .from('receivables')
         .insert({
+          customer_id: newReceivable.customer_id, // Use customer_id
           amount: amount,
           description: description,
           due_date: newReceivable.due_date,
           is_received: newReceivable.is_received,
-          customer_id: newReceivable.customer_id || null
         })
         .select();
         
@@ -583,6 +615,29 @@ const Receivables: React.FC = () => {
               </div>
             </div>
             
+            <div>
+              <Label htmlFor="customer_id" className="block mb-1">
+                Pelanggan
+              </Label>
+              <Select
+                value={newReceivable.customer_id}
+                onValueChange={(value) =>
+                  setNewReceivable({ ...newReceivable, customer_id: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih pelanggan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="is_received" 
