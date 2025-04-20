@@ -41,31 +41,80 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { formatRupiah } from '@/utils/currency';
+import { CustomerInvoice } from '@/types/customer';
 
-// Define types for Customer and Receivable
-type Customer = {
-  id: string;
-  name: string;
-  contact_info?: string;
-  created_at?: string;
-};
-
-type Receivable = {
-  id: number;
-  customer_id: string;
-  amount: number;
-  due_date: string;
-  created_at?: string;
-  customer_name: string; // Add customer_name to Receivable type
-  contact_info?: string; // Add contact_info to Receivable type
-  status: string;
-  invoice_number: string;
-  description: string;
-  is_received: boolean;
-  remaining_amount: number;
-  issue_date: string;
-  paid_date?: string;
-};
+const dummyReceivables = [
+  {
+    id: '1',
+    customer_id: '1',
+    customer_name: 'PT Maju Bersama',
+    contact_info: '081234567890',
+    invoice_number: 'INV-C001',
+    description: 'Penjualan produk makanan',
+    total_amount: 5000000,
+    paid_amount: 0,
+    issue_date: '2025-04-15',
+    due_date: '2025-05-15',
+    status: 'sent',
+    is_received: false,
+  },
+  {
+    id: '2',
+    customer_id: '2',
+    customer_name: 'CV Abadi Jaya',
+    contact_info: '087654321098',
+    invoice_number: 'INV-C002',
+    description: 'Penjualan minuman ringan',
+    total_amount: 3500000,
+    paid_amount: 0,
+    issue_date: '2025-04-12',
+    due_date: '2025-05-20',
+    status: 'sent',
+    is_received: false,
+  },
+  {
+    id: '3',
+    customer_id: '3',
+    customer_name: 'Toko Sejahtera',
+    contact_info: '089876543210',
+    invoice_number: 'INV-C003',
+    description: 'Penjualan camilan',
+    total_amount: 2000000,
+    paid_amount: 0,
+    issue_date: '2025-04-10',
+    due_date: '2025-05-25',
+    status: 'sent',
+    is_received: false,
+  },
+  {
+    id: '4',
+    customer_id: '4',
+    customer_name: 'PT Sukses Mandiri',
+    contact_info: '081122334455',
+    invoice_number: 'INV-C004',
+    description: 'Penjualan produk premium',
+    total_amount: 7500000,
+    paid_amount: 7500000,
+    issue_date: '2025-04-05',
+    due_date: '2025-04-30',
+    status: 'paid',
+    is_received: true,
+  },
+  {
+    id: '5',
+    customer_id: '5',
+    customer_name: 'CV Mitra Usaha',
+    contact_info: '082233445566',
+    invoice_number: 'INV-C005',
+    description: 'Penjualan makanan kemasan',
+    total_amount: 4250000,
+    paid_amount: 4250000,
+    issue_date: '2025-04-01',
+    due_date: '2025-04-25',
+    status: 'paid',
+    is_received: true,
+  },
+];
 
 const statusOptions = [
   { value: 'sent', label: 'Belum Dibayar' },
@@ -75,8 +124,8 @@ const statusOptions = [
 
 const Receivables: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>('');
-  const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [receivables, setReceivables] = useState(dummyReceivables);
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [newReceivable, setNewReceivable] = useState({
     invoice_number: '',
@@ -86,94 +135,55 @@ const Receivables: React.FC = () => {
     customer_id: '',
     contact_info: '',
     description: '',
-    amount: '',
+    total_amount: '',
     is_received: false,
   });
-  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  // Fetch receivables from Supabase
-  const { data: customerInvoices, error: customerInvoicesError, isLoading } = useQuery({
+  const { data: customerInvoices = [], isLoading } = useQuery({
     queryKey: ['customer-invoices'],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
           .from('receivables')
-          .select(`
-            id,
-            customer_id,
-            amount,
-            due_date,
-            created_at,
-            customers (
-              name,
-              contact_info
-            )
-          `);
-
+          .select('*')
+          .order('due_date', { ascending: true });
+          
         if (error) throw error;
-
+        
         if (data && data.length > 0) {
           return data.map(item => ({
-            id: Number(item.id),
-            customer_id: item.customer_id,
-            amount: item.amount,
+            id: item.id,
+            customer_id: item.customer_id || '',
+            customer_name: item.description.split(':')[0] || 'Unknown Customer',
+            contact_info: item.description.split(':')[1] || '',
+            invoice_number: `INV-${item.id.substring(0, 4)}`,
+            description: item.description,
+            total_amount: item.amount,
+            paid_amount: item.is_received ? item.amount : 0,
+            issue_date: new Date(item.created_at).toISOString().split('T')[0],
             due_date: item.due_date,
-            created_at: item.created_at,
-            customer_name: (item.customers as any)?.name || 'Unknown Customer', // Access customer name from joined table
-            contact_info: (item.customers as any)?.contact_info || '', // Access customer contact info from joined table
-            status: new Date(item.due_date).toLocaleDateString() < new Date().toLocaleDateString() ? 'overdue' : 'sent',
-            invoice_number: '',
-            description: '',
-            is_received: false,
-            remaining_amount: 0,
-            issue_date: '',
-            paid_date: '',
-          })) as Receivable[];
+            status: item.is_received ? 'paid' : new Date(item.due_date) < new Date() ? 'overdue' : 'sent',
+            is_received: item.is_received,
+          }));
         }
-
-        return []; // Return an empty array instead of dummy data
+        
+        return dummyReceivables;
       } catch (error) {
         console.error("Error fetching customer invoices:", error);
         toast.error("Gagal memuat data piutang pelanggan");
-        return []; // Return an empty array instead of dummy data
+        return dummyReceivables;
       }
     },
   });
 
   useEffect(() => {
-    if (customerInvoices) {
+    if (customerInvoices.length > 0) {
       setReceivables(customerInvoices);
     }
   }, [customerInvoices]);
 
-  // Fetch customers from Supabase
-  const { data: fetchedCustomers, isLoading: isLoadingCustomers } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.from('customers').select('*');
-        if (error) {
-          console.error('Error fetching customers:', error);
-          toast.error('Failed to load customers');
-          return [];
-        }
-        return data as Customer[];
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-        toast.error("Gagal memuat data pelanggan");
-        return [];
-      }
-    },
-  });
-
-  useEffect(() => {
-    if (fetchedCustomers) {
-      setCustomers(fetchedCustomers);
-    }
-  }, [fetchedCustomers]);
-
   const filteredReceivables = receivables.filter(receivable => {
-    const matchesSearch =
+    const matchesSearch = 
       receivable.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receivable.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receivable.invoice_number.toLowerCase().includes(searchTerm.toLowerCase());
@@ -182,61 +192,97 @@ const Receivables: React.FC = () => {
   });
 
   const handleAddReceivable = async () => {
-    if (!newReceivable.invoice_number || !newReceivable.issue_date || !newReceivable.due_date ||
-      !newReceivable.customer_name || !newReceivable.description || !newReceivable.amount) {
+    if (!newReceivable.invoice_number || !newReceivable.issue_date || !newReceivable.due_date || 
+        !newReceivable.customer_name || !newReceivable.description || !newReceivable.total_amount) {
       toast.error('Semua field harus diisi');
       return;
     }
 
-    const amount = parseFloat(newReceivable.amount);
-
+    const amount = parseFloat(newReceivable.total_amount);
+    
     try {
+      const description = `${newReceivable.customer_name}:${newReceivable.contact_info}:${newReceivable.description}`;
+      
       const { data, error } = await supabase
-        .from('receivables').insert(
-          [{
-            customer_id: newReceivable.customer_id, amount: amount, due_date: newReceivable.due_date,
-          }],
-        )
-
+        .from('receivables')
+        .insert({
+          amount: amount,
+          description: description,
+          due_date: newReceivable.due_date,
+          is_received: newReceivable.is_received,
+          customer_id: newReceivable.customer_id || null
+        })
+        .select();
+        
       if (error) throw error;
+      
+      const receivable = {
+        id: data && data[0] ? data[0].id : Date.now().toString(),
+        customer_id: newReceivable.customer_id || Date.now().toString(),
+        customer_name: newReceivable.customer_name,
+        contact_info: newReceivable.contact_info,
+        invoice_number: newReceivable.invoice_number,
+        description: newReceivable.description,
+        total_amount: amount,
+        paid_amount: newReceivable.is_received ? amount : 0,
+        issue_date: newReceivable.issue_date,
+        due_date: newReceivable.due_date,
+        status: newReceivable.is_received ? 'paid' : 'sent',
+        is_received: newReceivable.is_received,
+      };
 
-      toast.success("Piutang berhasil ditambahkan");
+      setReceivables([receivable, ...receivables]);
+      setNewReceivable({
+        invoice_number: '',
+        issue_date: '',
+        due_date: '',
+        customer_name: '',
+        customer_id: '',
+        contact_info: '',
+        description: '',
+        total_amount: '',
+        is_received: false,
+      });
       setIsAddReceivableOpen(false);
+      
+      toast.success("Piutang berhasil ditambahkan");
     } catch (error) {
       console.error("Error adding receivable:", error);
       toast.error("Gagal menambahkan piutang");
     }
   };
 
-  const toggleReceivableStatus = async (id: number) => {
+  const toggleReceivableStatus = async (id: string) => {
     try {
       const receivableToUpdate = receivables.find(r => r.id === id);
       if (!receivableToUpdate) return;
-
+      
       const newStatus = !receivableToUpdate.is_received;
-
-      const { data, error } = await supabase
+      
+      const { error } = await supabase
         .from('receivables')
-        .update({
+        .update({ 
           is_received: newStatus,
+          paid_date: newStatus ? new Date().toISOString() : null
         })
         .eq('id', id);
-
+        
       if (error) throw error;
-
-      setReceivables(prevReceivables =>
+      
+      setReceivables(prevReceivables => 
         prevReceivables.map(receivable => {
           if (receivable.id === id) {
-            return {
-              ...receivable,
+            return { 
+              ...receivable, 
               is_received: newStatus,
               status: newStatus ? 'paid' : 'sent',
+              paid_amount: newStatus ? receivable.total_amount : 0
             };
           }
           return receivable;
         })
       );
-
+      
       toast.success(`Piutang berhasil ${newStatus ? 'ditandai lunas' : 'ditandai belum lunas'}`);
     } catch (error) {
       console.error("Error updating receivable status:", error);
@@ -247,7 +293,7 @@ const Receivables: React.FC = () => {
   const getTotalReceivable = () => {
     return receivables.reduce((total, receivable) => {
       if (receivable.status !== 'paid') {
-        return total + receivable.amount;
+        return total + (receivable.total_amount - receivable.paid_amount);
       }
       return total;
     }, 0);
@@ -331,7 +377,7 @@ const Receivables: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={null}>Semua Status</SelectItem>
+                <SelectItem value="">Semua Status</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
@@ -366,7 +412,7 @@ const Receivables: React.FC = () => {
                   filteredReceivables.map((receivable) => (
                     <TableRow key={receivable.id}>
                       <TableCell>
-                        <Checkbox
+                        <Checkbox 
                           checked={receivable.is_received}
                           onCheckedChange={() => toggleReceivableStatus(receivable.id)}
                         />
@@ -391,7 +437,7 @@ const Receivables: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatRupiah(receivable.amount)}
+                        {formatRupiah(receivable.total_amount)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -439,7 +485,7 @@ const Receivables: React.FC = () => {
                 />
               </div>
             </div>
-
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="issue_date" className="block mb-1">
@@ -456,7 +502,7 @@ const Receivables: React.FC = () => {
                   />
                 </div>
               </div>
-
+              
               <div>
                 <Label htmlFor="due_date" className="block mb-1">
                   Jatuh Tempo
@@ -490,7 +536,7 @@ const Receivables: React.FC = () => {
                   />
                 </div>
               </div>
-
+              
               <div>
                 <Label htmlFor="contact_info" className="block mb-1">
                   Kontak (opsional)
@@ -519,55 +565,32 @@ const Receivables: React.FC = () => {
                 onChange={(e) => setNewReceivable({ ...newReceivable, description: e.target.value })}
               />
             </div>
-
+            
             <div>
-              <Label htmlFor="amount" className="block mb-1">
+              <Label htmlFor="total_amount" className="block mb-1">
                 Jumlah
               </Label>
               <div className="relative">
                 <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="amount"
+                  id="total_amount"
                   type="number"
                   placeholder="Jumlah piutang"
                   className="pl-8"
-                  value={newReceivable.amount}
-                  onChange={(e) => setNewReceivable({ ...newReceivable, amount: e.target.value })}
+                  value={newReceivable.total_amount}
+                  onChange={(e) => setNewReceivable({ ...newReceivable, total_amount: e.target.value })}
                 />
               </div>
             </div>
-
-            <div>
-              <Label htmlFor="customer_id" className="block mb-1">
-                Pelanggan
-              </Label>
-              <Select
-                value={newReceivable.customer_id}
-                onValueChange={(value) =>
-                  setNewReceivable({ ...newReceivable, customer_id: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih pelanggan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+            
             <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_received"
+              <Checkbox 
+                id="is_received" 
                 checked={newReceivable.is_received}
-                onCheckedChange={(checked) =>
-                  setNewReceivable({
-                    ...newReceivable,
-                    is_received: checked as boolean
+                onCheckedChange={(checked) => 
+                  setNewReceivable({ 
+                    ...newReceivable, 
+                    is_received: checked as boolean 
                   })
                 }
               />
