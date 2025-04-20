@@ -4,9 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowUpCircle, ArrowDownCircle, BadgeIndianRupee, Calendar } from 'lucide-react';
 import { formatRupiah } from '@/utils/currency';
 import { supabase } from '@/integrations/supabase/client';
+import { FinancialSummary } from '@/types/finance';
 
-const DashboardStats: React.FC = () => {
-  const { data: summary, isLoading } = useQuery({
+interface DashboardStatsProps {
+  summary?: FinancialSummary;
+}
+
+const DashboardStats: React.FC<DashboardStatsProps> = ({ summary: propsSummary }) => {
+  const { data: fetchedSummary, isLoading } = useQuery({
     queryKey: ['financial-summary'],
     queryFn: async () => {
       // Get month's income
@@ -50,8 +55,12 @@ const DashboardStats: React.FC = () => {
         balance,
         upcomingDebts
       };
-    }
+    },
+    // Skip fetching if we already have data from props
+    enabled: !propsSummary
   });
+
+  const summary = propsSummary || fetchedSummary;
 
   if (isLoading || !summary) {
     return <div>Loading...</div>;

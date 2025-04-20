@@ -58,7 +58,7 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Main stats */}
+      {/* Main stats - now we pass the summary as a prop */}
       <DashboardStats summary={data.financialSummary} />
 
       {/* Charts section */}
