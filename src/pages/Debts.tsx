@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,16 +36,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { PlusCircle, Search, Filter, Edit, Trash2, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { formatRupiah } from '@/utils/currency';
+import { SupplierInvoice } from '@/types/supplier';
 
+// Modified dummy data to align with supplier purchases
 const dummyDebts = [
   {
     id: '1',
     date: '2025-04-10',
     dueDate: '2025-05-10',
-    description: 'Pinjaman modal usaha',
-    creditor: 'Bank ABC',
+    description: 'Pembelian bahan baku',
+    supplier: 'PT Distributor Utama',
+    supplier_id: '1',
+    invoice_number: 'INV-S001',
     amount: 50000000,
     remainingAmount: 45000000,
     status: 'ongoing',
@@ -53,8 +61,10 @@ const dummyDebts = [
     id: '2',
     date: '2025-03-15',
     dueDate: '2025-06-15',
-    description: 'Pinjaman pembelian peralatan',
-    creditor: 'PT Supplier',
+    description: 'Pembelian peralatan',
+    supplier: 'CV Maju Jaya Supplier',
+    supplier_id: '2',
+    invoice_number: 'INV-S002',
     amount: 15000000,
     remainingAmount: 10000000,
     status: 'ongoing',
@@ -63,8 +73,10 @@ const dummyDebts = [
     id: '3',
     date: '2025-02-20',
     dueDate: '2025-04-20',
-    description: 'Pinjaman renovasi kantor',
-    creditor: 'Bank XYZ',
+    description: 'Pembelian packaging',
+    supplier: 'PT Aneka Barang',
+    supplier_id: '3',
+    invoice_number: 'INV-S003',
     amount: 25000000,
     remainingAmount: 0,
     status: 'paid',
@@ -73,8 +85,10 @@ const dummyDebts = [
     id: '4',
     date: '2025-01-05',
     dueDate: '2025-04-05',
-    description: 'Pinjaman operasional',
-    creditor: 'PT Finance',
+    description: 'Pembelian alat produksi',
+    supplier: 'CV Sumber Makmur',
+    supplier_id: '4',
+    invoice_number: 'INV-S004',
     amount: 10000000,
     remainingAmount: 2500000,
     status: 'ongoing',
@@ -83,20 +97,22 @@ const dummyDebts = [
     id: '5',
     date: '2024-12-10',
     dueDate: '2025-04-19',
-    description: 'Pinjaman pajak',
-    creditor: 'Bank DEF',
+    description: 'Pembelian bahan pendukung',
+    supplier: 'PT Sejahtera Supply',
+    supplier_id: '5',
+    invoice_number: 'INV-S005',
     amount: 7500000,
     remainingAmount: 0,
     status: 'paid',
   },
 ];
 
-const creditorOptions = [
-  'Bank ABC',
-  'Bank XYZ',
-  'Bank DEF',
-  'PT Supplier',
-  'PT Finance',
+const supplierOptions = [
+  'PT Distributor Utama',
+  'CV Maju Jaya Supplier',
+  'PT Aneka Barang',
+  'CV Sumber Makmur',
+  'PT Sejahtera Supply',
   'Lainnya',
 ];
 
@@ -115,20 +131,47 @@ const Debts: React.FC = () => {
     date: '',
     dueDate: '',
     description: '',
-    creditor: '',
+    supplier: '',
+    supplier_id: '',
+    invoice_number: '',
     amount: '',
   });
 
+  // In a real implementation, this would fetch unpaid supplier invoices from Supabase
+  const { data: supplierInvoices = [], isLoading } = useQuery({
+    queryKey: ['supplier-invoices'],
+    queryFn: async () => {
+      try {
+        // This would target a 'supplier_invoices' or 'purchases' table in Supabase
+        // that tracks purchases from suppliers
+        // For now, we'll use the dummy data
+        return dummyDebts;
+      } catch (error) {
+        console.error("Error fetching supplier invoices:", error);
+        toast.error("Gagal memuat data hutang pemasok");
+        return dummyDebts;
+      }
+    },
+  });
+
+  useEffect(() => {
+    // Update debts when supplier invoices are loaded
+    if (supplierInvoices.length > 0) {
+      setDebts(supplierInvoices);
+    }
+  }, [supplierInvoices]);
+
   const filteredDebts = debts.filter(debt => {
     const matchesSearch = debt.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         debt.creditor.toLowerCase().includes(searchTerm.toLowerCase());
+                         debt.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         debt.invoice_number.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus ? debt.status === selectedStatus : true;
     return matchesSearch && matchesStatus;
   });
 
   const handleAddDebt = () => {
-    if (!newDebt.date || !newDebt.dueDate || !newDebt.description || !newDebt.creditor || !newDebt.amount) {
-      alert('Semua field harus diisi');
+    if (!newDebt.date || !newDebt.dueDate || !newDebt.description || !newDebt.supplier || !newDebt.amount || !newDebt.invoice_number) {
+      toast.error('Semua field harus diisi');
       return;
     }
 
@@ -137,7 +180,9 @@ const Debts: React.FC = () => {
       date: newDebt.date,
       dueDate: newDebt.dueDate,
       description: newDebt.description,
-      creditor: newDebt.creditor,
+      supplier: newDebt.supplier,
+      supplier_id: newDebt.supplier_id || Date.now().toString(),
+      invoice_number: newDebt.invoice_number,
       amount: parseFloat(newDebt.amount),
       remainingAmount: parseFloat(newDebt.amount),
       status: 'ongoing',
@@ -148,18 +193,14 @@ const Debts: React.FC = () => {
       date: '',
       dueDate: '',
       description: '',
-      creditor: '',
+      supplier: '',
+      supplier_id: '',
+      invoice_number: '',
       amount: '',
     });
     setIsAddDebtOpen(false);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+    
+    toast.success("Hutang berhasil ditambahkan");
   };
 
   const getStatusBadge = (status: string) => {
@@ -182,7 +223,7 @@ const Debts: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold">Hutang</h1>
           <p className="text-muted-foreground">
-            Kelola dan pantau semua hutang perusahaan
+            Kelola hutang pembelian produk dari pemasok
           </p>
         </div>
         <Button onClick={() => setIsAddDebtOpen(true)}>
@@ -194,13 +235,13 @@ const Debts: React.FC = () => {
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle>Ringkasan Hutang</CardTitle>
-          <CardDescription>Ikhtisar hutang perusahaan</CardDescription>
+          <CardDescription>Ikhtisar hutang pembelian dari pemasok</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Total Hutang Aktif</p>
-              <p className="text-2xl font-bold">{formatCurrency(totalDebt)}</p>
+              <p className="text-2xl font-bold">{formatRupiah(totalDebt)}</p>
             </div>
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Jumlah Hutang Aktif</p>
@@ -208,8 +249,11 @@ const Debts: React.FC = () => {
             </div>
             <div className="bg-background p-4 rounded-lg border">
               <p className="text-sm text-muted-foreground">Hutang Terbesar</p>
-              <p className="text-2xl font-bold">Rp 45.000.000</p>
-              <p className="text-xs text-muted-foreground">Kreditor: Bank ABC</p>
+              <p className="text-2xl font-bold">{formatRupiah(Math.max(...debts.filter(d => d.status === 'ongoing').map(d => d.remainingAmount), 0))}</p>
+              <p className="text-xs text-muted-foreground">
+                {debts.filter(d => d.status === 'ongoing')
+                  .sort((a, b) => b.remainingAmount - a.remainingAmount)[0]?.supplier || 'Tidak ada'}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -236,7 +280,7 @@ const Debts: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="">Semua Status</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
@@ -251,8 +295,9 @@ const Debts: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>No. Faktur</TableHead>
                   <TableHead>Deskripsi</TableHead>
-                  <TableHead>Kreditor</TableHead>
+                  <TableHead>Pemasok</TableHead>
                   <TableHead>Tanggal Jatuh Tempo</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
@@ -263,19 +308,20 @@ const Debts: React.FC = () => {
               <TableBody>
                 {filteredDebts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
+                    <TableCell colSpan={8} className="text-center py-6">
                       Tidak ada data hutang yang sesuai
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredDebts.map((debt) => (
                     <TableRow key={debt.id}>
+                      <TableCell>{debt.invoice_number}</TableCell>
                       <TableCell>{debt.description}</TableCell>
-                      <TableCell>{debt.creditor}</TableCell>
+                      <TableCell>{debt.supplier}</TableCell>
                       <TableCell>{new Date(debt.dueDate).toLocaleDateString('id-ID')}</TableCell>
                       <TableCell>{getStatusBadge(debt.status)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(debt.amount)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(debt.remainingAmount)}</TableCell>
+                      <TableCell className="text-right">{formatRupiah(debt.amount)}</TableCell>
+                      <TableCell className="text-right">{formatRupiah(debt.remainingAmount)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="icon">
@@ -299,81 +345,97 @@ const Debts: React.FC = () => {
       </Card>
 
       <Dialog open={isAddDebtOpen} onOpenChange={setIsAddDebtOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Tambah Hutang Baru</DialogTitle>
+            <DialogTitle>Tambah Hutang Pembelian</DialogTitle>
             <DialogDescription>
-              Masukkan detail hutang yang ingin dicatat.
+              Masukkan detail hutang pembelian dari pemasok.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Tanggal
-              </Label>
-              <div className="col-span-3 relative">
-                <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="date"
-                  type="date"
-                  className="pl-8"
-                  value={newDebt.date}
-                  onChange={(e) => setNewDebt({ ...newDebt, date: e.target.value })}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="date" className="block mb-1">
+                  Tanggal Pembelian
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="date"
+                    type="date"
+                    className="pl-8"
+                    value={newDebt.date}
+                    onChange={(e) => setNewDebt({ ...newDebt, date: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="dueDate" className="block mb-1">
+                  Jatuh Tempo
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    className="pl-8"
+                    value={newDebt.dueDate}
+                    onChange={(e) => setNewDebt({ ...newDebt, dueDate: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="dueDate" className="text-right">
-                Jatuh Tempo
+            
+            <div>
+              <Label htmlFor="invoice_number" className="block mb-1">
+                Nomor Faktur
               </Label>
-              <div className="col-span-3 relative">
-                <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="dueDate"
-                  type="date"
-                  className="pl-8"
-                  value={newDebt.dueDate}
-                  onChange={(e) => setNewDebt({ ...newDebt, dueDate: e.target.value })}
-                />
-              </div>
+              <Input
+                id="invoice_number"
+                placeholder="Nomor faktur pembelian"
+                value={newDebt.invoice_number}
+                onChange={(e) => setNewDebt({ ...newDebt, invoice_number: e.target.value })}
+              />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
+            
+            <div>
+              <Label htmlFor="description" className="block mb-1">
                 Deskripsi
               </Label>
               <Input
                 id="description"
-                placeholder="Deskripsi hutang"
-                className="col-span-3"
+                placeholder="Deskripsi pembelian"
                 value={newDebt.description}
                 onChange={(e) => setNewDebt({ ...newDebt, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="creditor" className="text-right">
-                Kreditor
+            
+            <div>
+              <Label htmlFor="supplier" className="block mb-1">
+                Pemasok
               </Label>
               <Select
-                value={newDebt.creditor}
-                onValueChange={(value) => setNewDebt({ ...newDebt, creditor: value })}
+                value={newDebt.supplier}
+                onValueChange={(value) => setNewDebt({ ...newDebt, supplier: value })}
               >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Pilih kreditor" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih pemasok" />
                 </SelectTrigger>
                 <SelectContent>
-                  {creditorOptions.map((creditor) => (
-                    <SelectItem key={creditor} value={creditor}>
-                      {creditor}
+                  {supplierOptions.map((supplier) => (
+                    <SelectItem key={supplier} value={supplier}>
+                      {supplier}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
+            
+            <div>
+              <Label htmlFor="amount" className="block mb-1">
                 Jumlah
               </Label>
-              <div className="col-span-3 relative">
+              <div className="relative">
                 <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="amount"
