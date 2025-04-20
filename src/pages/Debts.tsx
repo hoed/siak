@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
@@ -39,11 +38,11 @@ import {
 import { toast } from 'sonner';
 import { PlusCircle, Search, Filter, Edit, Trash2, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { formatRupiah } from '@/utils/currency';
 import { SupplierInvoice } from '@/types/supplier';
 
-// Modified dummy data to align with supplier purchases
 const dummyDebts = [
   {
     id: '1',
@@ -56,6 +55,7 @@ const dummyDebts = [
     amount: 50000000,
     remainingAmount: 45000000,
     status: 'ongoing',
+    is_paid: false,
   },
   {
     id: '2',
@@ -68,6 +68,7 @@ const dummyDebts = [
     amount: 15000000,
     remainingAmount: 10000000,
     status: 'ongoing',
+    is_paid: false,
   },
   {
     id: '3',
@@ -80,6 +81,7 @@ const dummyDebts = [
     amount: 25000000,
     remainingAmount: 0,
     status: 'paid',
+    is_paid: true,
   },
   {
     id: '4',
@@ -92,6 +94,7 @@ const dummyDebts = [
     amount: 10000000,
     remainingAmount: 2500000,
     status: 'ongoing',
+    is_paid: false,
   },
   {
     id: '5',
@@ -104,6 +107,7 @@ const dummyDebts = [
     amount: 7500000,
     remainingAmount: 0,
     status: 'paid',
+    is_paid: true,
   },
 ];
 
@@ -135,16 +139,36 @@ const Debts: React.FC = () => {
     supplier_id: '',
     invoice_number: '',
     amount: '',
+    is_paid: false,
   });
 
-  // In a real implementation, this would fetch unpaid supplier invoices from Supabase
   const { data: supplierInvoices = [], isLoading } = useQuery({
     queryKey: ['supplier-invoices'],
     queryFn: async () => {
       try {
-        // This would target a 'supplier_invoices' or 'purchases' table in Supabase
-        // that tracks purchases from suppliers
-        // For now, we'll use the dummy data
+        const { data, error } = await supabase
+          .from('debts')
+          .select('*')
+          .order('due_date', { ascending: true });
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          return data.map(item => ({
+            id: item.id,
+            date: new Date(item.created_at).toISOString().split('T')[0],
+            dueDate: item.due_date,
+            description: item.description,
+            supplier: item.description.split(':')[0] || 'Unknown Supplier',
+            supplier_id: item.supplier_id || '',
+            invoice_number: `INV-S${item.id.substring(0, 4)}`,
+            amount: item.amount,
+            remainingAmount: item.is_paid ? 0 : item.amount,
+            status: item.is_paid ? 'paid' : new Date(item.due_date) < new Date() ? 'overdue' : 'ongoing',
+            is_paid: item.is_paid,
+          }));
+        }
+        
         return dummyDebts;
       } catch (error) {
         console.error("Error fetching supplier invoices:", error);
@@ -155,7 +179,6 @@ const Debts: React.FC = () => {
   });
 
   useEffect(() => {
-    // Update debts when supplier invoices are loaded
     if (supplierInvoices.length > 0) {
       setDebts(supplierInvoices);
     }
@@ -169,38 +192,99 @@ const Debts: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddDebt = () => {
+  const handleAddDebt = async () => {
     if (!newDebt.date || !newDebt.dueDate || !newDebt.description || !newDebt.supplier || !newDebt.amount || !newDebt.invoice_number) {
       toast.error('Semua field harus diisi');
       return;
     }
 
-    const debt = {
-      id: Date.now().toString(),
-      date: newDebt.date,
-      dueDate: newDebt.dueDate,
-      description: newDebt.description,
-      supplier: newDebt.supplier,
-      supplier_id: newDebt.supplier_id || Date.now().toString(),
-      invoice_number: newDebt.invoice_number,
-      amount: parseFloat(newDebt.amount),
-      remainingAmount: parseFloat(newDebt.amount),
-      status: 'ongoing',
-    };
+    try {
+      const description = `${newDebt.supplier}:${newDebt.description}`;
+      const amount = parseFloat(newDebt.amount);
+      
+      const { data, error } = await supabase
+        .from('debts')
+        .insert({
+          amount: amount,
+          description: description,
+          due_date: newDebt.dueDate,
+          is_paid: newDebt.is_paid,
+          supplier_id: newDebt.supplier_id || null
+        })
+        .select();
+        
+      if (error) throw error;
+      
+      const debt = {
+        id: data && data[0] ? data[0].id : Date.now().toString(),
+        date: newDebt.date,
+        dueDate: newDebt.dueDate,
+        description: newDebt.description,
+        supplier: newDebt.supplier,
+        supplier_id: newDebt.supplier_id || Date.now().toString(),
+        invoice_number: newDebt.invoice_number,
+        amount: amount,
+        remainingAmount: newDebt.is_paid ? 0 : amount,
+        status: newDebt.is_paid ? 'paid' : 'ongoing',
+        is_paid: newDebt.is_paid,
+      };
 
-    setDebts([debt, ...debts]);
-    setNewDebt({
-      date: '',
-      dueDate: '',
-      description: '',
-      supplier: '',
-      supplier_id: '',
-      invoice_number: '',
-      amount: '',
-    });
-    setIsAddDebtOpen(false);
-    
-    toast.success("Hutang berhasil ditambahkan");
+      setDebts([debt, ...debts]);
+      setNewDebt({
+        date: '',
+        dueDate: '',
+        description: '',
+        supplier: '',
+        supplier_id: '',
+        invoice_number: '',
+        amount: '',
+        is_paid: false,
+      });
+      setIsAddDebtOpen(false);
+      
+      toast.success("Hutang berhasil ditambahkan");
+    } catch (error) {
+      console.error("Error adding debt:", error);
+      toast.error("Gagal menambahkan hutang");
+    }
+  };
+
+  const toggleDebtPayment = async (id: string) => {
+    try {
+      const debtToUpdate = debts.find(d => d.id === id);
+      if (!debtToUpdate) return;
+      
+      const newPaidStatus = !debtToUpdate.is_paid;
+      
+      const { error } = await supabase
+        .from('debts')
+        .update({ 
+          is_paid: newPaidStatus,
+          paid_date: newPaidStatus ? new Date().toISOString() : null
+        })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setDebts(prevDebts => 
+        prevDebts.map(debt => {
+          if (debt.id === id) {
+            return { 
+              ...debt, 
+              is_paid: newPaidStatus,
+              status: newPaidStatus ? 'paid' : 'ongoing',
+              remainingAmount: newPaidStatus ? 0 : debt.amount
+            };
+          }
+          return debt;
+        })
+      );
+      
+      toast.success(`Hutang berhasil ${newPaidStatus ? 'ditandai lunas' : 'ditandai belum lunas'}`);
+    } catch (error) {
+      console.error("Error updating debt status:", error);
+      toast.error("Gagal memperbarui status hutang");
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -215,7 +299,8 @@ const Debts: React.FC = () => {
   };
 
   const totalDebt = debts.reduce((sum, debt) => sum + debt.remainingAmount, 0);
-  const ongoingDebts = debts.filter(debt => debt.status === 'ongoing').length;
+  const ongoingDebts = debts.filter(debt => debt.status !== 'paid').length;
+  const overdueDebts = debts.filter(debt => debt.status === 'overdue').length;
 
   return (
     <MainLayout>
@@ -248,12 +333,8 @@ const Debts: React.FC = () => {
               <p className="text-2xl font-bold">{ongoingDebts}</p>
             </div>
             <div className="bg-background p-4 rounded-lg border">
-              <p className="text-sm text-muted-foreground">Hutang Terbesar</p>
-              <p className="text-2xl font-bold">{formatRupiah(Math.max(...debts.filter(d => d.status === 'ongoing').map(d => d.remainingAmount), 0))}</p>
-              <p className="text-xs text-muted-foreground">
-                {debts.filter(d => d.status === 'ongoing')
-                  .sort((a, b) => b.remainingAmount - a.remainingAmount)[0]?.supplier || 'Tidak ada'}
-              </p>
+              <p className="text-sm text-muted-foreground">Hutang Jatuh Tempo</p>
+              <p className="text-2xl font-bold text-red-600">{overdueDebts}</p>
             </div>
           </div>
         </CardContent>
@@ -295,11 +376,11 @@ const Debts: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">Status</TableHead>
                   <TableHead>No. Faktur</TableHead>
                   <TableHead>Deskripsi</TableHead>
                   <TableHead>Pemasok</TableHead>
                   <TableHead>Tanggal Jatuh Tempo</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
                   <TableHead className="text-right">Sisa</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
@@ -315,11 +396,21 @@ const Debts: React.FC = () => {
                 ) : (
                   filteredDebts.map((debt) => (
                     <TableRow key={debt.id}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={debt.is_paid}
+                          onCheckedChange={() => toggleDebtPayment(debt.id)}
+                        />
+                      </TableCell>
                       <TableCell>{debt.invoice_number}</TableCell>
                       <TableCell>{debt.description}</TableCell>
                       <TableCell>{debt.supplier}</TableCell>
-                      <TableCell>{new Date(debt.dueDate).toLocaleDateString('id-ID')}</TableCell>
-                      <TableCell>{getStatusBadge(debt.status)}</TableCell>
+                      <TableCell>
+                        {new Date(debt.dueDate).toLocaleDateString('id-ID')}
+                        {new Date(debt.dueDate) < new Date() && debt.status !== 'paid' && (
+                          <Badge variant="destructive" className="ml-2">Jatuh Tempo</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">{formatRupiah(debt.amount)}</TableCell>
                       <TableCell className="text-right">{formatRupiah(debt.remainingAmount)}</TableCell>
                       <TableCell className="text-right">
@@ -446,6 +537,25 @@ const Debts: React.FC = () => {
                   onChange={(e) => setNewDebt({ ...newDebt, amount: e.target.value })}
                 />
               </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="is_paid" 
+                checked={newDebt.is_paid}
+                onCheckedChange={(checked) => 
+                  setNewDebt({ 
+                    ...newDebt, 
+                    is_paid: checked as boolean 
+                  })
+                }
+              />
+              <label
+                htmlFor="is_paid"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Sudah Dibayar
+              </label>
             </div>
           </div>
           <DialogFooter>

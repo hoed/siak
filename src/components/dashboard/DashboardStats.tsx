@@ -14,47 +14,118 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ summary: propsSummary }
   const { data: fetchedSummary, isLoading } = useQuery({
     queryKey: ['financial-summary'],
     queryFn: async () => {
-      // Get month's income
-      const { data: monthlyIncome, error: incomeError } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('type', 'income')
-        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-        .lt('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString());
+      try {
+        // Get month's income
+        const { data: monthlyIncome, error: incomeError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('type', 'income')
+          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+          .lt('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString());
 
-      if (incomeError) throw incomeError;
+        if (incomeError) {
+          console.error('Error fetching income:', incomeError);
+          throw incomeError;
+        }
 
-      // Get month's expenses
-      const { data: monthlyExpenses, error: expenseError } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('type', 'expense')
-        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-        .lt('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString());
+        // Get month's expenses
+        const { data: monthlyExpenses, error: expenseError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('type', 'expense')
+          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+          .lt('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString());
 
-      if (expenseError) throw expenseError;
+        if (expenseError) {
+          console.error('Error fetching expenses:', expenseError);
+          throw expenseError;
+        }
 
-      // Get upcoming debts
-      const { data: upcomingDebts, error: debtsError } = await supabase
-        .from('debts')
-        .select('*')
-        .eq('is_paid', false)
-        .gte('due_date', new Date().toISOString())
-        .lte('due_date', new Date(new Date().setDate(new Date().getDate() + 7)).toISOString());
+        // Get upcoming debts (payments due in the next 7 days)
+        const { data: upcomingDebts, error: debtsError } = await supabase
+          .from('debts')
+          .select('*')
+          .eq('is_paid', false)
+          .gte('due_date', new Date().toISOString())
+          .lte('due_date', new Date(new Date().setDate(new Date().getDate() + 7)).toISOString());
 
-      if (debtsError) throw debtsError;
+        if (debtsError) {
+          console.error('Error fetching debts:', debtsError);
+          throw debtsError;
+        }
 
-      const totalIncome = monthlyIncome.reduce((sum, t) => sum + t.amount, 0);
-      const totalExpense = monthlyExpenses.reduce((sum, t) => sum + t.amount, 0);
-      const balance = totalIncome - totalExpense;
-      const upcomingDebtTotal = upcomingDebts.reduce((sum, d) => sum + d.amount, 0);
+        // Get upcoming receivables (payments due in the next 7 days)
+        const { data: upcomingReceivables, error: receivablesError } = await supabase
+          .from('receivables')
+          .select('*')
+          .eq('is_received', false)
+          .gte('due_date', new Date().toISOString())
+          .lte('due_date', new Date(new Date().setDate(new Date().getDate() + 7)).toISOString());
 
-      return {
-        totalIncome: { month: totalIncome },
-        totalExpense: { month: totalExpense },
-        balance,
-        upcomingDebts
-      };
+        if (receivablesError) {
+          console.error('Error fetching receivables:', receivablesError);
+          throw receivablesError;
+        }
+
+        // Calculate totals
+        const totalIncome = monthlyIncome ? monthlyIncome.reduce((sum, t) => sum + (t.amount || 0), 0) : 0;
+        const totalExpense = monthlyExpenses ? monthlyExpenses.reduce((sum, t) => sum + (t.amount || 0), 0) : 0;
+        const balance = totalIncome - totalExpense;
+        
+        // Format debts for display
+        const formattedDebts = upcomingDebts ? upcomingDebts.map(debt => ({
+          id: debt.id,
+          amount: debt.amount,
+          description: debt.description,
+          personName: debt.description.split(':')[0] || 'Unknown Supplier',
+          dueDate: debt.due_date,
+          isPaid: debt.is_paid,
+          contactInfo: debt.description.split(':')[1] || '',
+        })) : [];
+
+        // Format receivables for display
+        const formattedReceivables = upcomingReceivables ? upcomingReceivables.map(receivable => ({
+          id: receivable.id,
+          amount: receivable.amount,
+          description: receivable.description,
+          personName: receivable.description.split(':')[0] || 'Unknown Customer',
+          dueDate: receivable.due_date,
+          isReceived: receivable.is_received,
+          contactInfo: receivable.description.split(':')[1] || '',
+        })) : [];
+
+        return {
+          totalIncome: { 
+            month: totalIncome,
+            week: 0,
+            day: 0,
+            year: 0,
+            all: 0
+          },
+          totalExpense: { 
+            month: totalExpense,
+            week: 0,
+            day: 0,
+            year: 0,
+            all: 0
+          },
+          balance,
+          recentTransactions: [],
+          upcomingDebts: formattedDebts,
+          upcomingReceivables: formattedReceivables
+        };
+      } catch (error) {
+        console.error('Error fetching financial summary:', error);
+        // Return default values if error
+        return {
+          totalIncome: { month: 0, week: 0, day: 0, year: 0, all: 0 },
+          totalExpense: { month: 0, week: 0, day: 0, year: 0, all: 0 },
+          balance: 0,
+          recentTransactions: [],
+          upcomingDebts: [],
+          upcomingReceivables: []
+        };
+      }
     },
     // Skip fetching if we already have data from props
     enabled: !propsSummary
@@ -63,7 +134,22 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ summary: propsSummary }
   const summary = propsSummary || fetchedSummary;
 
   if (isLoading || !summary) {
-    return <div>Loading...</div>;
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="info-box animate-pulse">
+            <div className="info-box-icon bg-gray-200 text-gray-300">
+              <div className="h-6 w-6 rounded-full bg-gray-300"></div>
+            </div>
+            <div className="info-box-content">
+              <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
+              <div className="h-6 w-32 bg-gray-200 rounded mb-1"></div>
+              <div className="h-3 w-20 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   const stats = [
@@ -96,7 +182,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ summary: propsSummary }
       icon: <Calendar size={24} />,
       value: formatRupiah(summary.upcomingDebts.reduce((acc, debt) => acc + debt.amount, 0)),
       change: '',
-      period: 'Jatuh tempo minggu ini',
+      period: `${summary.upcomingDebts.length} hutang jatuh tempo minggu ini`,
       color: 'bg-finance-debt',
     },
   ];
