@@ -86,7 +86,7 @@ const Sidebar: React.FC = () => {
           {isOpen ? (
             <div className="flex items-center">
               <Wallet className="h-6 w-6 mr-2 text-white" />
-              <span className="text-lg font-semibold text-white">SisKeu</span>
+              <span className="text-lg font-semibold text-white">Finance System</span>
             </div>
           ) : (
             <Wallet className="h-6 w-6 text-white mx-auto" />
