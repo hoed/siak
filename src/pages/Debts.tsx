@@ -129,7 +129,7 @@ const statusOptions = [
 const Debts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [debts, setDebts] = useState(dummyDebts);
   const [newDebt, setNewDebt] = useState({
     date: '',
@@ -361,7 +361,7 @@ const Debts: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Status</SelectItem>
+                <SelectItem value={null}>Semua Status</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
