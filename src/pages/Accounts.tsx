@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -98,7 +97,7 @@ const Accounts: React.FC = () => {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState(dummyAccounts);
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string | null>('');
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [isViewAccountOpen, setIsViewAccountOpen] = useState(false);
@@ -232,7 +231,7 @@ const Accounts: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Tipe</SelectItem>
+                <SelectItem value={null}>Semua Tipe</SelectItem>
                 {accountTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -337,12 +336,13 @@ const Accounts: React.FC = () => {
                 <Label htmlFor="type">Tipe Akun</Label>
                 <Select
                   value={newAccount.type}
-                  onValueChange={(value) => setNewAccount({ ...newAccount, type: value })}
+                  onValueChange={(value: string | null) => setNewAccount({ ...newAccount, type: value })}
                 >
                   <SelectTrigger id="type">
                     <SelectValue placeholder="Pilih tipe akun" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={null}>Pilih tipe akun</SelectItem>
                     {accountTypes.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type}
