@@ -126,16 +126,10 @@ const statusOptions = [
   { value: 'overdue', label: 'Terlambat' },
 ];
 
-// Define a type for suppliers
-type Supplier = {
-  id: string;
-  name: string;
-};
-
 const Debts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDebtOpen, setIsAddDebtOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [debts, setDebts] = useState(dummyDebts);
   const [newDebt, setNewDebt] = useState({
     date: '',
@@ -147,7 +141,6 @@ const Debts: React.FC = () => {
     amount: '',
     is_paid: false,
   });
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]); // State to hold suppliers
 
   const { data: supplierInvoices = [], isLoading } = useQuery({
     queryKey: ['supplier-invoices'],
@@ -185,31 +178,11 @@ const Debts: React.FC = () => {
     },
   });
 
-  // Fetch suppliers from Supabase
-  const { data: fetchedSuppliers, isLoading: isLoadingSuppliers } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('suppliers').select('*');
-      if (error) {
-        console.error('Error fetching suppliers:', error);
-        toast.error('Failed to load suppliers');
-        return [];
-      }
-      return data as Supplier[];
-    },
-  });
-
   useEffect(() => {
     if (supplierInvoices.length > 0) {
       setDebts(supplierInvoices);
     }
   }, [supplierInvoices]);
-
-  useEffect(() => {
-    if (fetchedSuppliers) {
-      setSuppliers(fetchedSuppliers);
-    }
-  }, [fetchedSuppliers]);
 
   const filteredDebts = debts.filter(debt => {
     const matchesSearch = debt.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -388,7 +361,7 @@ const Debts: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={null}>Semua Status</SelectItem>
+                <SelectItem value="">Semua Status</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
@@ -533,16 +506,16 @@ const Debts: React.FC = () => {
                 Pemasok
               </Label>
               <Select
-                value={newDebt.supplier_id} // Use supplier_id instead of supplier
-                onValueChange={(value) => setNewDebt({ ...newDebt, supplier_id: value })} // Update supplier_id
+                value={newDebt.supplier}
+                onValueChange={(value) => setNewDebt({ ...newDebt, supplier: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih pemasok" />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
+                  {supplierOptions.map((supplier) => (
+                    <SelectItem key={supplier} value={supplier}>
+                      {supplier}
                     </SelectItem>
                   ))}
                 </SelectContent>
