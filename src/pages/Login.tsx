@@ -25,9 +25,9 @@ const Login: React.FC = () => {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-center">Selamat Datang</CardTitle>
+            <CardTitle className="text-center">Login</CardTitle>
             <CardDescription className="text-center">
-              Kelola keuangan Anda dengan mudah
+              Please enter your credentials to access your account.
             </CardDescription>
           </CardHeader>
           
