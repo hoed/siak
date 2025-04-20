@@ -153,7 +153,7 @@ const Receivables: React.FC = () => {
         if (data && data.length > 0) {
           return data.map(item => ({
             id: item.id,
-            customer_id: (item as any).customer_id || '',
+            customer_id: item.customer_id || '',
             customer_name: item.description.split(':')[0] || 'Unknown Customer',
             contact_info: item.description.split(':')[1] || '',
             invoice_number: `INV-${item.id.substring(0, 4)}`,

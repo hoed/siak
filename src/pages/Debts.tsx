@@ -160,7 +160,7 @@ const Debts: React.FC = () => {
             dueDate: item.due_date,
             description: item.description,
             supplier: item.description.split(':')[0] || 'Unknown Supplier',
-            supplier_id: (item as any).supplier_id || '',
+            supplier_id: item.supplier_id || '',
             invoice_number: `INV-S${item.id.substring(0, 4)}`,
             amount: item.amount,
             remainingAmount: item.is_paid ? 0 : item.amount,
