@@ -131,7 +131,7 @@ type Customer = {
 
 const Receivables: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>('');
   const [receivables, setReceivables] = useState(dummyReceivables);
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [newReceivable, setNewReceivable] = useState({
@@ -409,7 +409,7 @@ const Receivables: React.FC = () => {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Status</SelectItem>
+                <SelectItem value={null}>Semua Status</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
